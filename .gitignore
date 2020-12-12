@@ -1,0 +1,9 @@
+input_data
+output_data
+plots
+dev-notebooks
+.idea
+k_tools/__pycache__
+*.pyd
+*.pyc
+*.pyo
