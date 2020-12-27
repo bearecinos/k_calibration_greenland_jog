@@ -18,7 +18,6 @@ from oggm.core import inversion
 from oggm.shop import its_live
 
 
-Old_main_path = os.path.expanduser('~/k_calibration_greenland/')
 MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
 sys.path.append(MAIN_PATH)
 
@@ -27,7 +26,6 @@ from k_tools import utils_racmo as utils_racmo
 from k_tools import misc as misc
 
 config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
-old_config = ConfigObj(os.path.join(Old_main_path, 'config.ini'))
 
 # Paths to data
 plot_path = os.path.join(MAIN_PATH, 'plots/')
@@ -39,21 +37,21 @@ rcParams['ytick.labelsize'] = 10
 sns.set_context('poster')
 
 # The mask and geo reference data
-mask_file = os.path.join(Old_main_path, old_config['mask_topo'])
+mask_file = os.path.join(MAIN_PATH, config['mask_topo'])
 ds_geo = xr.open_dataset(mask_file, decode_times=False)
 proj = pyproj.Proj('+init=EPSG:3413')
 ds_geo.attrs['pyproj_srs'] = proj.srs
 
 # Getting hi-resolution coastline
-coast_line = salem.read_shapefile(os.path.join(Old_main_path,
-                                               old_config['coastline']))
+coast_line = salem.read_shapefile(os.path.join(MAIN_PATH,
+                                               config['coastline']))
 
 # Velocity data paths
-vel_itslive_path = os.path.join(Old_main_path, old_config['vel_golive'])
-err_itslive_path = os.path.join(Old_main_path, old_config['error_vel_golive'])
+vel_itslive_path = os.path.join(MAIN_PATH, config['vel_golive'])
+err_itslive_path = os.path.join(MAIN_PATH, config['error_vel_golive'])
 
-vel_measures_path = os.path.join(Old_main_path, old_config['vel_path'])
-err_measures_path = os.path.join(Old_main_path, old_config['error_vel_path'])
+vel_measures_path = os.path.join(MAIN_PATH, config['vel_path'])
+err_measures_path = os.path.join(MAIN_PATH, config['error_vel_path'])
 
 # Read vel data
 dvel_itslive = utils_vel.open_vel_raster(vel_itslive_path)
@@ -63,27 +61,29 @@ dvel_measures = utils_vel.open_vel_raster(vel_measures_path)
 derr_measures = utils_vel.open_vel_raster(err_measures_path)
 
 # Paths to RACMO data
-racmo_main_path = os.path.join(Old_main_path, old_config['racmo_path'])
+racmo_main_path = os.path.join(MAIN_PATH, config['racmo_path'])
 smb_path = os.path.join(racmo_main_path,
                         'smb_rec.1958-2018.BN_RACMO2.3p2_FGRN055_GrIS.MM.nc')
 
 ds_smb = utils_racmo.open_racmo(smb_path, mask_file)
 dsc = xr.open_dataset(smb_path, decode_times=False)#.chunk({'time':20})
 dsc.attrs['pyproj_srs'] = proj.srs
+
 dsc['time'] = np.append(pd.period_range(start='2018.01.01',
                                     end='2018.12.01', freq='M').to_timestamp(),
                            pd.period_range(start='1958.01.01',
                                     end='2017.12.01', freq='M').to_timestamp())
 
 ds_smb_two = dsc.isel(time=slice(48,12*34))
-see = ds_smb_two.chunk({'time':2})
-avg = see.SMB_rec.mean(dim='time').compute()
+#see = ds_smb_two.chunk({'time':2})
+avg = ds_smb_two.SMB_rec.mean(dim='time').compute()
 
 # OGGM run
 cfg.initialize()
-cfg.initialize(logging_level='WORKFLOW')
-cfg.PATHS['working_dir'] = utils.gettempdir(dirname='plot-input-data',
-                                            reset=True)
+SLURM_WORKDIR = os.environ["WORKDIR"]
+# Local paths (where to write output and where to download input)
+WORKING_DIR = SLURM_WORKDIR
+cfg.PATHS['working_dir'] = WORKING_DIR
 
 # Find a glacier with good coverage of both data
 gdirs = workflow.init_glacier_directories(['RGI60-05.00800'],
@@ -106,7 +106,7 @@ for gdir in gdirs:
     cfg.PARAMS['inversion_calving_k'] = 0.759134306038709
     out = inversion.find_inversion_calving(gdir)
 
-gdir = gdirs[0]
+gdir=gdirs[0]
 
 misc.write_flowlines_to_shape(gdir, path=gdir.dir)
 shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
@@ -140,13 +140,13 @@ ds_sel['time'] = np.append(pd.period_range(start='2018.01.01',
 
 # We select the time that we need 1960-1990
 ds_smb_two_sel = ds_sel.isel(time=slice(48,12*34))
-ds_smb_time_sel = ds_smb_two_sel.chunk({'time':2})
+#ds_smb_time_sel = ds_smb_two_sel.chunk({'time':2})
 
-smb_avg_sel = ds_smb_time_sel.SMB_rec.mean(dim='time', skipna=True).compute()
+smb_avg_sel = ds_smb_two_sel.SMB_rec.mean(dim='time', skipna=True).compute()
 
 print('Done calculating')
 
-# Now plotting
+#Now plotting
 fig1 = plt.figure(figsize=(16, 15), constrained_layout=True)
 
 widths = [2, 2, 2]
@@ -266,6 +266,6 @@ at = AnchoredText('i', prop=dict(size=18), frameon=True, loc=2)
 ax8.add_artist(at)
 
 # plt.show()
-plt.savefig(os.path.join(plot_path,
-                         'data_input_plot_example.pdf'),
+plt.savefig(os.path.join(cfg.PATHS['working_dir'],
+                         'data_input_plot_all.png'),
                             bbox_inches='tight')

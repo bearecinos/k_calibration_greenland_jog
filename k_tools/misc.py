@@ -568,6 +568,6 @@ def plot_inversion_diff(gdirs, ax=None, smap=None,
                           linewidth=linewidth, zorder=50)
 
     smap.plot(ax)
-    return dict(cbar_label='Section thickness [m]',
+    return dict(cbar_label='delta thickness \n [m]',
                 cbar_primitive=dl,
                 title_comment=' ({:.2f} km3)'.format(np.nansum(vol) * 1e-9))
