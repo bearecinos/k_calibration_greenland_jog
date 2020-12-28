@@ -593,3 +593,161 @@ plt.tight_layout()
 plt.savefig(os.path.join(plot_path, 'k_fa_differences.pdf'),
                   bbox_inches='tight')
 # plt.show()
+
+# FIGURE 5
+fig5 = plt.figure(figsize=(16, 10), constrained_layout=True)
+
+gs = fig5.add_gridspec(2, 3, wspace=0.01, hspace=0.1)
+
+
+ax0 = fig5.add_subplot(gs[0, 0])
+color_array = [color_palette_k[0], color_palette_k[2]]
+k_racmo = df_measures.calving_inversion_k_k_racmo_value.values
+k_racmo_error = df_measures.error_k_racmo.values
+k_measures = df_measures.k_value.values
+k_measures_error = df_measures.error_k_measures.values
+ax0.errorbar(k_racmo, k_measures,
+             xerr=k_racmo_error, yerr=k_measures_error,
+             color=color_palette_k[0], fmt='o', alpha=0.5,
+             ecolor=sns.xkcd_rgb["dark grey"],
+             elinewidth=2.5)
+ax0.plot([0, 3], [0, 3], c='grey', alpha=0.7)
+ax0.set_xlim(-0.1, 4)
+ax0.set_ylim(-0.1, 4)
+ax0.set_xlabel('$k_{RACMO}$ [yr$^{-1}$]')
+ax0.set_ylabel('$k_{MEaSUREs}$ [yr$^{-1}$]')
+
+at = AnchoredText('a', prop=dict(size=15), frameon=True, loc=2)
+test0 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_MvR, ".2f")) +
+                    '\np-value = ' + str(format(p_pearson_k_MvR, ".3E")),
+                    prop=dict(size=15), frameon=True, loc=1)
+test0.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+ax0.add_artist(at)
+ax0.add_artist(test0)
+
+ax1 = fig5.add_subplot(gs[0, 1])
+k_racmo = df_itslive.calving_inversion_k_k_racmo_value.values
+k_racmo_error = df_itslive.error_k_racmo.values
+k_itslive = df_itslive.k_value.values
+k_itslive_error = df_itslive.error_k_itslive.values
+ax1.errorbar(k_racmo, k_itslive,
+             xerr=k_racmo_error, yerr=k_itslive_error,
+             color=color_palette_k[2], fmt='o', alpha=0.5,
+             ecolor=sns.xkcd_rgb["dark grey"],
+             elinewidth=2.5)
+ax1.plot([0, 3], [0, 3], c='grey', alpha=0.7)
+ax1.set_xlim(-0.1, 4)
+ax1.set_ylim(-0.1, 4)
+ax1.set_xlabel('$k_{RACMO}$ [yr$^{-1}$]')
+ax1.set_ylabel('$k_{ITSlive}$ [yr$^{-1}$]')
+test1 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_IvR, ".2f")) +
+                    '\np-value = ' + str(format(p_pearson_k_IvR, ".3E")),
+                    prop=dict(size=15), frameon=True, loc=1)
+test1.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+at = AnchoredText('b', prop=dict(size=15), frameon=True, loc=2)
+ax1.add_artist(at)
+ax1.add_artist(test1)
+
+ax2 = fig5.add_subplot(gs[0, 2])
+k_measures = df_measures.k_value.values
+k_measures_error = df_measures.error_k_measures.values
+k_itslive = df_itslive.k_value.values
+k_itslive_error = df_itslive.error_k_itslive.values
+
+ax2.errorbar(k_itslive, k_measures,
+             xerr=k_itslive_error, yerr=k_measures_error,
+             color=color_palette_k[4], fmt='o', alpha=0.5,
+             ecolor=sns.xkcd_rgb["dark grey"],
+             elinewidth=2.5)
+ax2.plot([0, 3], [0, 3], c='grey', alpha=0.7)
+ax2.set_xlim(-0.1, 4)
+ax2.set_ylim(-0.1, 4)
+ax2.set_xlabel('$k_{ITSlive}$ [yr$^{-1}$]')
+ax2.set_ylabel('$k_{MEaSUREs}$ [yr$^{-1}$]')
+
+test2 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_IvM, ".2f")) +
+                    '\np-value = ' + str(format(p_pearson_k_IvM, ".3E")),
+                    prop=dict(size=15), frameon=True, loc=1)
+test2.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+at = AnchoredText('c', prop=dict(size=15), frameon=True, loc=2)
+ax2.add_artist(at)
+ax2.add_artist(test2)
+
+ax3 = fig5.add_subplot(gs[1, 0])
+q_racmo = df_measures.calving_flux_k_racmo_value.values
+q_racmo_error = df_measures.error_q_racmo.values
+q_measures = df_measures.q_value.values
+q_measures_error = df_measures.error_q_measures.values
+ax3.errorbar(q_racmo, q_measures,
+             xerr=q_racmo_error, yerr=q_measures_error,
+             color=color_palette_q[0], fmt='o', alpha=0.5,
+             ecolor=sns.xkcd_rgb["dark grey"],
+             elinewidth=2.5)
+
+ax3.plot([0, 0.75], [0, 0.75], c='grey', alpha=0.7)
+ax3.set_xlim(-0.1, 1.0)
+ax3.set_ylim(-0.1, 1.0)
+ax3.set_xlabel('$q_{calving-RACMO}$ [$km^3$yr$^{-1}$]')
+ax3.set_ylabel('$q_{calving-MEaSUREs}$ [$km^3$yr$^{-1}$]')
+test3 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_q_MvR, ".2f")) +
+                    '\np-value = ' + str(format(p_pearson_q_MvR, ".3E")),
+                    prop=dict(size=15), frameon=True, loc=1)
+test3.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+at = AnchoredText('d', prop=dict(size=15), frameon=True, loc=2)
+ax3.add_artist(at)
+ax3.add_artist(test3)
+
+
+ax4 = fig5.add_subplot(gs[1, 1])
+q_racmo = df_itslive.calving_flux_k_racmo_value.values
+q_racmo_error = df_itslive.error_q_racmo.values
+q_itslive = df_itslive.q_value.values
+q_itslive_error = df_itslive.error_q_itslive.values
+ax4.errorbar(q_racmo, q_itslive,
+             xerr=q_racmo_error, yerr=q_itslive_error,
+             color=color_palette_q[2], fmt='o', alpha=0.5,
+             ecolor=sns.xkcd_rgb["dark grey"],
+             elinewidth=2.5)
+
+ax4.plot([0, 0.75], [0, 0.75], c='grey', alpha=0.7)
+ax4.set_xlim(-0.1, 1.0)
+ax4.set_ylim(-0.1, 1.0)
+ax4.set_xlabel('$q_{calving-RACMO}$ [$km^3$yr$^{-1}$]')
+ax4.set_ylabel('$q_{calving-ITSlive}$ [$km^3$yr$^{-1}$]')
+test4 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_q_IvR, ".2f")) +
+                    '\np-value = ' + str(format(p_pearson_q_IvR, ".3E")),
+                    prop=dict(size=15), frameon=True, loc=1)
+test4.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+at = AnchoredText('e', prop=dict(size=15), frameon=True, loc=2)
+ax4.add_artist(at)
+ax4.add_artist(test4)
+
+ax5 = fig5.add_subplot(gs[1, 2])
+q_measures = df_measures.q_value.values
+q_measures_error = df_measures.error_q_measures.values
+q_itslive = df_itslive.q_value.values
+q_itslive_error = df_itslive.error_q_itslive.values
+ax5.errorbar(q_itslive, q_measures,
+             xerr=q_itslive_error, yerr=q_measures_error,
+             color=color_palette_k[5], fmt='o', alpha=0.5,
+             ecolor=sns.xkcd_rgb["dark grey"],
+             elinewidth=2.5)
+
+ax5.plot([0, 0.75], [0, 0.75], c='grey', alpha=0.7)
+ax5.set_xlim(-0.1, 1.0)
+ax5.set_ylim(-0.1, 1.0)
+ax5.set_xlabel('$q_{calving-ITSlive}$ [$km^3$yr$^{-1}$]')
+ax5.set_ylabel('$q_{calving-MEaSUREs}$ [$km^3$yr$^{-1}$]')
+test5 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_q_IvM, ".2f")) +
+                    '\np-value = ' + str(format(p_pearson_q_IvM, ".3E")),
+                    prop=dict(size=15), frameon=True, loc=1)
+test5.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+at = AnchoredText('f', prop=dict(size=15), frameon=True, loc=2)
+ax5.add_artist(at)
+ax5.add_artist(test5)
+
+
+plt.tight_layout()
+plt.savefig(os.path.join(plot_path, 'k_values_fa_result_corr_no_width.png'),
+                 bbox_inches='tight')
+# plt.show()
