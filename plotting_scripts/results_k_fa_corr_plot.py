@@ -48,7 +48,7 @@ df_common = pd.read_csv(os.path.join(output_dir_path,
 
 area_cover_b = df_common.rgi_area_km2.sum()
 
-df_common = df_common.loc[df_common.calving_inversion_k_k_racmo_value != 0]
+df_common = df_common.loc[df_common.calving_inversion_k_k_racmo_value > 0]
 df_common = df_common.loc[df_common.calving_inversion_k_k_measures_value < 20]
 
 df_common['calving_front_width'] = df_common['calving_front_width']*1e-3
