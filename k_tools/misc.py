@@ -468,8 +468,7 @@ def get_core_data(df):
 def get_k_dependent(df, exp_name):
     """
     df: dataframe of glacier statistics from which
-    we will extract the core data that does not change
-    with k values
+    we will extract the data that changes with k values
     returns: df_dep: k dependent variables per run
     """
 
@@ -478,7 +477,7 @@ def get_k_dependent(df, exp_name):
                  'vas_volume_km3', 'vas_thickness_m', 'calving_flux',
                  'calving_mu_star', 'calving_law_flux', 'calving_water_level',
                  'calving_inversion_k', 'calving_front_water_depth',
-                 'calving_front_thick']]
+                 'calving_front_thick', 'vbsl', 'vbsl_c']]
 
     df_dep_core.columns = [col+'_'+exp_name for col in df_dep_core.columns]
 

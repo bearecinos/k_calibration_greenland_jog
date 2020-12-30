@@ -78,6 +78,12 @@ ice_cap_ids = rgidf_ice_cap.RGIId.values
 keep_indexes = [(i in ice_cap_ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_indexes]
 
+# Remove pre-pro errors
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
+
 # Sort for more efficient parallel computing
 rgidf = rgidf.sort_values('Area', ascending=False)
 

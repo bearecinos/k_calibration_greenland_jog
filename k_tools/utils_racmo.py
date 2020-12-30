@@ -510,8 +510,9 @@ def find_k_values_within_racmo_range(df_oggm, df_racmo):
 
 
 def merge_racmo_calibration_results_with_glac_stats(calibration_path,
-                                                  glac_stats_path,
-                                                  exp_name):
+                                                    glac_stats_path,
+                                                    volume_bsl_path,
+                                                    exp_name):
     """
 
     :param calibration_path: path to racmo calibration results csv file
@@ -529,6 +530,15 @@ def merge_racmo_calibration_results_with_glac_stats(calibration_path,
     # Read calibration output and crop the file to the right k configuration
     d_calibration = pd.read_csv(calibration_path, index_col='Unnamed: 0')
     d_calibration.rename(columns={'RGIId': 'rgi_id'}, inplace=True)
+
+    # Read volume below sea level output
+    oggm_vbsl = pd.read_csv(volume_bsl_path, index_col='Unnamed: 0')
+
+    oggm_vbsl.rename(columns={
+        'RGIId': 'rgi_id',
+        'volume bsl': 'vbsl',
+        'volume bsl with calving': 'vbsl_c'},
+        inplace=True)
 
     if "lowbound" in exp_name:
         d_calibration = d_calibration[['rgi_id',
@@ -574,4 +584,10 @@ def merge_racmo_calibration_results_with_glac_stats(calibration_path,
                         left_on = 'rgi_id',
                         right_on='rgi_id')
 
-    return df_merge
+    df_merge_all = pd.merge(left=df_merge,
+                            right=oggm_vbsl,
+                            how='left',
+                            left_on='rgi_id',
+                            right_on='rgi_id')
+
+    return df_merge_all

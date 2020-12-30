@@ -23,6 +23,8 @@ if not os.path.exists(output_path):
 # Reading glacier directories per experiment
 exp_dir_path = os.path.join(MAIN_PATH, config['volume_results'])
 
+exp_dir_bvsl_path = os.path.join(MAIN_PATH, config['volume_bsl_results'])
+
 config_paths = pd.read_csv(os.path.join(MAIN_PATH,
                                         config['configuration_names']))
 
@@ -31,10 +33,16 @@ for configuration in config_paths.config_path:
     full_config_paths.append(os.path.join(MAIN_PATH, exp_dir_path,
                                           configuration + '/'))
 
+full_bvsl_config_paths = []
+for configuration in config_paths.config_path:
+    full_bvsl_config_paths.append(os.path.join(MAIN_PATH, exp_dir_bvsl_path,
+                                               configuration + '/'))
 
-# Merge velocity data with calibration results
-for path, results in zip(full_config_paths[0:6],
-                         config_paths.fit_output[0:6]):
+
+# Merge velocity data with calibration results and volume below sea level
+for path, path_vbsl, results in zip(full_config_paths[0:6],
+                                    full_bvsl_config_paths[0:6],
+                                    config_paths.fit_output[0:6]):
 
     experiment_name = misc.splitall(path)[-2]
 
@@ -42,22 +50,27 @@ for path, results in zip(full_config_paths[0:6],
                                   'glacier_statisticscalving_' +
                                   experiment_name +
                                   '.csv')
+
+    oggm_vbsl_file_path = os.path.join(path_vbsl,
+                                       experiment_name+
+                                       '_volume_below_sea_level.csv')
 
     calibration_path = os.path.join(MAIN_PATH, config['linear_fit_to_data'],
                                     results + '.csv')
 
     df_merge = merge_vel_calibration_results_with_glac_stats(calibration_path,
                                                              oggm_file_path,
+                                                             oggm_vbsl_file_path,
                                                              experiment_name)
 
     df_merge.to_csv(os.path.join(output_path,
                                  experiment_name+'_merge_results.csv'))
 
 
-
 # Merge racmo data with calibration results
-for path, results in zip(full_config_paths[-3:],
-                         config_paths.fit_output[-3:]):
+for path, path_vbsl, results in zip(full_config_paths[-3:],
+                                    full_bvsl_config_paths[-3:],
+                                    config_paths.fit_output[-3:]):
 
     experiment_name = misc.splitall(path)[-2]
 
@@ -66,12 +79,16 @@ for path, results in zip(full_config_paths[-3:],
                                   experiment_name +
                                   '.csv')
 
+    oggm_vbsl_file_path = os.path.join(path_vbsl,
+                                       experiment_name +
+                                       '_volume_below_sea_level.csv')
+
     calibration_path = os.path.join(MAIN_PATH, config['linear_fit_to_data'],
                                     results + '.csv')
 
     df_merge = merge_racmo_calibration_results_with_glac_stats(calibration_path,
                                                                oggm_file_path,
+                                                               oggm_vbsl_file_path,
                                                                experiment_name)
-
     df_merge.to_csv(os.path.join(output_path,
                                  experiment_name + '_merge_results.csv'))
