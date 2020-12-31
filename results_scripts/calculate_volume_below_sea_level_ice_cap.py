@@ -56,6 +56,7 @@ print('gdirs initialized')
 
 vbsl_no_calving_per_dir = []
 ids = []
+term_type = []
 
 for gdir in gdirs:
 
@@ -71,7 +72,6 @@ for gdir in gdirs:
     inv = gdir.read_pickle('inversion_output')
 
     import matplotlib.pylab as plt
-
     for f, cl, in zip(range(len(fls)), inv):
         x = np.arange(fls[f].nx) * fls[f].dx * map_dx * 1e-3
         surface = fls[f].surface_h
@@ -87,20 +87,23 @@ for gdir in gdirs:
         vol_sl = sum(vol[index_sl]) / 1e9
         # print('before calving',vol_sl)
 
-        vbsl_no_calving_per_glacier = np.append(
-            vbsl_no_calving_per_glacier, vol_sl)
+        if gdir.terminus_type == 'Land-terminating':
+            vol_sl = 0
 
-        ids = np.append(ids, gdir.rgi_id)
+        vbsl_no_calving_per_glacier = np.append(vbsl_no_calving_per_glacier,
+                                                vol_sl)
 
-    # We sum up all the volume below sea level in all branches
-    vbsl_no_calving_per_glacier = sum(vbsl_no_calving_per_glacier)
+    ids = np.append(ids, gdir.rgi_id)
+
+    term_type = np.append(term_type, gdir.terminus_type)
 
     vbsl_no_calving_per_dir = np.append(vbsl_no_calving_per_dir,
-                                        vbsl_no_calving_per_glacier)
+                                        vbsl_no_calving_per_glacier.sum())
 
     np.set_printoptions(suppress=True)
 
-d = {'RGIId': pd.unique(ids),
+d = {'RGIId': ids,
+     'terminus_type': term_type,
      'volume bsl': vbsl_no_calving_per_dir}
 
 data_frame = pd.DataFrame(data=d)

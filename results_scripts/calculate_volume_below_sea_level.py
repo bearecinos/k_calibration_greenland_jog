@@ -23,7 +23,6 @@ config_paths = pd.read_csv(os.path.join(MAIN_PATH,
 
 print(config_paths.config_path)
 print(config_paths.results_output)
-exit()
 
 full_config_paths = []
 for configuration in config_paths.config_path:

@@ -75,7 +75,7 @@ def get_study_area(rgi, main_path, ice_cap_prepro_path):
     keep_connection = [(i not in connection) for i in rgidf.Connect]
     rgidf = rgidf.iloc[keep_connection]
 
-    study_area = rgidf.Area.sum()
+    study_area = rgidf.Area.astype(float).sum()
     return study_area
 
 
@@ -496,6 +496,26 @@ def get_k_dependent(df, exp_name):
     df_dep = pd.concat([df_dep_core, extra], axis=1)
 
     return df_dep
+
+
+def summarize_exp(df):
+    """
+    df: dataframe of glacier statistics from which
+    we will extract the calving fluxes and volumes per experiment
+    return: df_results: results of each exp.
+    """
+
+    df_results = df[['rgi_id',
+                     'rgi_area_km2',
+                     'volume_before_calving',
+                     'inv_volume_km3',
+                     'calving_flux',
+                     'vbsl',
+                     'vbsl_c']]
+
+    df_results['volume_before_calving'] = df_results.volume_before_calving*1e-9
+
+    return df_results
 
 
 def calculate_study_area(ids, geo_df):
