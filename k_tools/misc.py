@@ -6,13 +6,15 @@ import os
 import xarray as xr
 import pickle
 from salem import wgs84
+from scipy import stats
 from shapely.ops import transform as shp_trafo
 import shapely.geometry as shpg
 from functools import partial
 from collections import OrderedDict
-from oggm import cfg, graphics
+from oggm import cfg, graphics, utils
 import netCDF4
 import matplotlib.pyplot as plt
+from matplotlib.offsetbox import AnchoredText
 import salem
 
 # Module logger
@@ -465,7 +467,7 @@ def get_core_data(df):
     return df_core
 
 
-def get_k_dependent(df, exp_name):
+def get_k_dependent(df, df_vel, exp_name):
     """
     df: dataframe of glacier statistics from which
     we will extract the data that changes with k values
@@ -479,9 +481,17 @@ def get_k_dependent(df, exp_name):
                  'calving_inversion_k', 'calving_front_water_depth',
                  'calving_front_thick', 'vbsl', 'vbsl_c']]
 
-    df_dep_core.columns = [col+'_'+exp_name for col in df_dep_core.columns]
+    df_vel = df_vel[['rgi_id', 'velocity_cross', 'velocity_surf']]
 
-    df_dep_core = df_dep_core.rename(columns={'rgi_id'+'_'+exp_name: 'rgi_id'})
+    df_merge_core = pd.merge(left=df_dep_core,
+                        right=df_vel,
+                        how='left',
+                        left_on='rgi_id',
+                        right_on='rgi_id')
+
+    df_merge_core.columns = [col+'_'+exp_name for col in df_merge_core.columns]
+
+    df_merge_core = df_merge_core.rename(columns={'rgi_id'+'_'+exp_name: 'rgi_id'})
 
     if 'itslive' in exp_name:
         extra = df[['method_itslive', 'surface_vel_obs_itslive',
@@ -493,7 +503,7 @@ def get_k_dependent(df, exp_name):
         extra = df[['method_racmo', 'fa_racmo', 'racmo_low_bound',
                     'racmo_up_bound',]]
 
-    df_dep = pd.concat([df_dep_core, extra], axis=1)
+    df_dep = pd.concat([df_merge_core, extra], axis=1)
 
     return df_dep
 
@@ -526,6 +536,43 @@ def calculate_study_area(ids, geo_df):
     area_sel = rgi_ids.Area.sum()
 
     return area_sel
+
+
+def calculate_statistics(obs, model, area_coverage, z):
+    """
+    Calculates statistics between velocity and racmo observations and
+    estimates done by oggm after k calibration
+    obs: measures, itslive or racmo observations
+    model: model resuts after k calibration
+    area_coverage: study area percentage represented in the data
+    z: an array of the same length as the data frames
+    returns
+    -------
+    test: a box of the statistics to plot in a figure
+    zline: fitted line
+    wline: fitted line
+    """
+
+    RMSD = utils.rmsd(obs, model)
+
+    mean_dev = utils.md(obs, model)
+
+    slope, intercept, r_value, p_value, std_err = stats.linregress(obs, model)
+
+    test = AnchoredText(' Area % = ' + str(format(area_coverage, ".2f")) +
+                        '\n slope = ' + str(format(slope, ".2f")) +
+                        '\n intercept = ' + str(format(intercept, ".2f")) +
+                        '\n r$^2$ = ' + str(format(r_value, ".2f")) +
+                        '\n RMSD = ' + str(format(RMSD, ".2f")) +
+                        ' m$yr^{-1}$' +
+                        '\n Bias = ' + str(format(mean_dev, ".2f")) +
+                        ' m$yr^{-1}$',
+                        prop=dict(size=12), frameon=True, loc=1)
+
+    zline = slope * z + intercept
+    wline = 1 * z + 0
+
+    return test, zline, wline
 
 
 @graphics._plot_map

@@ -15,6 +15,9 @@ config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 # Where we stored merged data
 output_path= os.path.join(MAIN_PATH, 'output_data/13_Merged_data_test')
 
+output_path_vel = os.path.join(MAIN_PATH,
+                               'output_data/12_Calculate_vel_with_k_results')
+
 config_paths = pd.read_csv(os.path.join(MAIN_PATH,
                                         config['configuration_names']))
 exp_name = []
@@ -25,10 +28,15 @@ for exp in config_paths.config_path:
 # Find common glaciers among all data sets and get the data that will be the
 # same for all k values.
 all_files = sorted(glob.glob(output_path + "/*.csv"))
-print(all_files)
+
+files_vel = []
+for exp, subpath in zip(exp_name, config_paths.config_path):
+    path = os.path.join(subpath, exp)
+    file_name = os.path.join(output_path_vel, path + '_velocity_data.csv')
+    files_vel.append(file_name)
 
 li = []
-for filename in all_files:
+for filename in all_files[1:-2]:
     df = pd.read_csv(filename, index_col=0)
     li.append(df)
 
@@ -38,8 +46,9 @@ for d in li:
     core.append(core_data)
 
 dep = []
-for d, name in zip(li, exp_name):
-    dep_data = misc.get_k_dependent(d, name)
+for d, name, vel_file in zip(li, exp_name, files_vel):
+    df_vel = pd.read_csv(vel_file)
+    dep_data = misc.get_k_dependent(d, df_vel, name)
     dep.append(dep_data)
 
 df_common = reduce(lambda x,y: pd.merge(x,y, on='rgi_id', how='inner'), dep)

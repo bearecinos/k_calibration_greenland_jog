@@ -489,6 +489,7 @@ def find_k_values_within_vel_range(df_oggm, df_vel):
 def merge_vel_calibration_results_with_glac_stats(calibration_path,
                                                   glac_stats_path,
                                                   volume_bsl_path,
+                                                  df_vel,
                                                   exp_name):
     """
 
@@ -507,6 +508,8 @@ def merge_vel_calibration_results_with_glac_stats(calibration_path,
     # Read calibration output and crop the file to the right k configuration
     d_calibration = pd.read_csv(calibration_path, index_col='Unnamed: 0')
     d_calibration.rename(columns={'RGIId': 'rgi_id'}, inplace=True)
+
+    df_vel = df_vel[['rgi_id', 'velocity_cross', 'velocity_surf']]
 
     # Read volume below sea level output
     oggm_vbsl = pd.read_csv(volume_bsl_path, index_col='Unnamed: 0')
@@ -606,4 +609,10 @@ def merge_vel_calibration_results_with_glac_stats(calibration_path,
                             left_on='rgi_id',
                             right_on='rgi_id')
 
-    return df_merge_all
+    df_merge_with_vel = pd.merge(left=df_merge_all,
+                            right=df_vel,
+                            how='left',
+                            left_on='rgi_id',
+                            right_on='rgi_id')
+
+    return df_merge_with_vel

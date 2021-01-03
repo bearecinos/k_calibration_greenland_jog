@@ -612,8 +612,8 @@ ax0.errorbar(k_racmo, k_measures,
              ecolor=sns.xkcd_rgb["dark grey"],
              elinewidth=2.5)
 ax0.plot([0, 3], [0, 3], c='grey', alpha=0.7)
-ax0.set_xlim(-0.1, 4)
-ax0.set_ylim(-0.1, 4)
+ax0.set_xlim(-0.2, 4)
+ax0.set_ylim(-0.2, 4)
 ax0.set_xlabel('$k_{RACMO}$ [yr$^{-1}$]')
 ax0.set_ylabel('$k_{MEaSUREs}$ [yr$^{-1}$]')
 
@@ -636,8 +636,8 @@ ax1.errorbar(k_racmo, k_itslive,
              ecolor=sns.xkcd_rgb["dark grey"],
              elinewidth=2.5)
 ax1.plot([0, 3], [0, 3], c='grey', alpha=0.7)
-ax1.set_xlim(-0.1, 4)
-ax1.set_ylim(-0.1, 4)
+ax1.set_xlim(-0.2, 4)
+ax1.set_ylim(-0.2, 4)
 ax1.set_xlabel('$k_{RACMO}$ [yr$^{-1}$]')
 ax1.set_ylabel('$k_{ITSlive}$ [yr$^{-1}$]')
 test1 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_IvR, ".2f")) +
@@ -660,8 +660,8 @@ ax2.errorbar(k_itslive, k_measures,
              ecolor=sns.xkcd_rgb["dark grey"],
              elinewidth=2.5)
 ax2.plot([0, 3], [0, 3], c='grey', alpha=0.7)
-ax2.set_xlim(-0.1, 4)
-ax2.set_ylim(-0.1, 4)
+ax2.set_xlim(-0.2, 4)
+ax2.set_ylim(-0.2, 4)
 ax2.set_xlabel('$k_{ITSlive}$ [yr$^{-1}$]')
 ax2.set_ylabel('$k_{MEaSUREs}$ [yr$^{-1}$]')
 

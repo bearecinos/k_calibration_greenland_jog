@@ -414,5 +414,5 @@ df_volumes_total = {'Configuration': configurations_order,
 
 data_frame = pd.DataFrame(data=df_volumes_total)
 
-# data_frame.to_csv(os.path.join(output_path +
-#                                    '/total_volume_vbsl_for_final_plot.csv'))
+data_frame.to_csv(os.path.join(output_path +
+                                   '/total_volume_vbsl_for_final_plot.csv'))

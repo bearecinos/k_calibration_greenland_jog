@@ -164,7 +164,7 @@ color_array = [color_palette[0], color_palette[2],
 
 fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8))
 
-ax0.set_yscale("log")
+# ax0.set_yscale("log")
 g0 = sns.catplot(x="area_class", y="k_value", hue='Method',
                  data=to_plot_k, kind='box', ax=ax0, legend=True,
                  palette=color_array)
@@ -179,7 +179,7 @@ ax0.get_legend().remove()
 handles, labels = ax0.get_legend_handles_labels()
 ax0.legend(handles, ['$k_{MEaSUREs}$',
                      '$k_{ITSlive}$',
-                     '$k_{RACMO}$'], loc=4, fontsize=19)
+                     '$k_{RACMO}$'], loc=1, fontsize=19)
 
 
 
@@ -222,6 +222,6 @@ plt.close(3)
 plt.close(4)
 
 plt.tight_layout()
-# plt.show()
+#plt.show()
 plt.savefig(os.path.join(plot_path, 'box_plot.png'),
-             bbox_inches='tight')
+              bbox_inches='tight')

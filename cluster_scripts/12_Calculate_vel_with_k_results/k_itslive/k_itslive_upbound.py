@@ -197,12 +197,7 @@ for gdir in gdirs:
     k_value = sel.k_for_up_bound.values
 
     cfg.PARAMS['inversion_calving_k'] = float(k_value)
-    out = inversion.find_inversion_calving(gdir)
-    if out is None:
-        continue
-
-    calving_flux = out['calving_flux']
-    calving_mu_star = out['calving_mu_star']
+    inversion.find_inversion_calving(gdir)
 
     inversion.compute_velocities(gdir)
 
@@ -213,17 +208,13 @@ for gdir in gdirs:
 
     cross = np.append(cross, vel_cross)
     surface = np.append(surface, vel_surface)
-    flux = np.append(flux, calving_flux)
-    mu_star = np.append(mu_star, calving_mu_star)
     k_used = np.append(k_used, k_value)
     ids = np.append(ids, gdir.rgi_id)
 
 d = {'rgi_id': ids,
      'k_values': k_used,
      'velocity_cross': cross,
-     'velocity_surf': surface,
-     'calving_flux': flux,
-     'mu_star': mu_star}
+     'velocity_surf': surface}
 
 df = pd.DataFrame(data=d)
 
