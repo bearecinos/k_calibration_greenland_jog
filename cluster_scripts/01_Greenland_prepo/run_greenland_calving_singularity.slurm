@@ -21,9 +21,8 @@ echo "Workdir for this run: $WORKDIR"
 export WORKDIR
 
 # Run the actual job. The srun invocation starts it as individual step for slurm.
-srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec docker://oggm/oggm:latest bash -s <<EOF
+srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec docker://oggm/oggm:20201118 bash -s <<EOF
   set -e
-
   python3 -m venv --system-site-packages "$WORKDIR/oggm_env"
   source "$WORKDIR/oggm_env/bin/activate"
 

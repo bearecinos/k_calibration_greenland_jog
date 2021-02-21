@@ -1,7 +1,6 @@
-# This will run OGGM and obtain velocity data from the MEaSUREs Multi-year
-# Greenland Ice Sheet Velocity Mosaic, Version 1.
-# It will give you velocity averages along the main centrelines
-# with the respective uncertainty from the MEaSUREs tiff files
+# This will run OGGM and extract velocity data from ITSlive at 120 m
+# It will give you velocity averages along the last one third of the
+# main flow-line with the respective uncertainty from the ITSLIVE data.
 # Python imports
 from __future__ import division
 import os
@@ -20,6 +19,7 @@ import oggm.cfg as cfg
 from oggm import workflow
 from oggm import tasks
 from oggm.workflow import execute_entity_task
+from oggm.shop import its_live
 
 # Module logger
 import logging
@@ -53,9 +53,7 @@ cfg.PATHS['working_dir'] = WORKING_DIR
 # Use multiprocessing
 cfg.PARAMS['use_multiprocessing'] = True
 
-# We make the border 20 so we can use the Columbia itmix DEM
 cfg.PARAMS['border'] = 20
-# Set to True for operational runs
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
 cfg.PARAMS['inversion_fs'] = 5.7e-20
@@ -63,10 +61,17 @@ cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
+cfg.PARAMS['free_board_marine_terminating'] = 10, 150
 
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
+
+# Exclude glaciers with prepro-erros
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
 
 # We use intersects
 cfg.set_intersects_db(os.path.join(MAIN_PATH, config['intercepts']))
@@ -78,6 +83,10 @@ rgidf = rgidf.sort_values('RGIId', ascending=True)
 df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
                                         config['ice_cap_prepro']))
 df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
+
+print(len(df_prepro_ic))
+print(len(rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
+          'Area']))
 
 # Assign an area to the ice cap from OGGM to avoid errors
 rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
@@ -94,12 +103,6 @@ connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
-# Exclude glaciers with prepro erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
-
 # # Run a single id for testing
 # glacier = ['RGI60-05.00304', 'RGI60-05.08443']
 # keep_indexes = [(i in glacier) for i in rgidf.RGIId]
@@ -113,9 +116,6 @@ rgidf_gimp = rgidf.iloc[keep_gimp]
 
 rgidf = rgidf.iloc[keep_indexes_no_gimp]
 
-# # Sort for more efficient parallel computing
-# rgidf = rgidf.sort_values('Area', ascending=False)
-
 log.info('Starting run for RGI reg: ' + rgi_region)
 log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
 log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
@@ -123,11 +123,12 @@ log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 # Go - initialize working directories
 # -----------------------------------
 gdirs = workflow.init_glacier_directories(rgidf)
-
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs, source='ARCTICDEM')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                             source='ARCTICDEM')
 
 gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp, source='GIMP')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+                             source='GIMP')
 
 gdirs.extend(gdirs_gimp)
 
@@ -143,6 +144,8 @@ task_list = [
 ]
 for task in task_list:
     execute_entity_task(task, gdirs)
+
+workflow.execute_entity_task(its_live.velocity_to_gdir, gdirs, add_error=True)
 
 # Log
 m, s = divmod(time.time() - start, 60)
@@ -161,20 +164,6 @@ length_fls = []
 
 files_no_data = []
 
-# We need the components of vel
-fx = os.path.join(MAIN_PATH, config['vel_x_path'])
-fy = os.path.join(MAIN_PATH, config['vel_y_path'])
-# And Error
-ex = os.path.join(MAIN_PATH, config['err_x_path'])
-ey = os.path.join(MAIN_PATH, config['err_y_path'])
-
-# Open the files with salem
-dsx = salem.GeoTiff(fx)
-dsy = salem.GeoTiff(fy)
-
-dex = salem.GeoTiff(ex)
-dey = salem.GeoTiff(ey)
-
 for gdir in gdirs:
 
     # first we compute the centerlines as shapefile to crop the satellite
@@ -182,11 +171,6 @@ for gdir in gdirs:
     misc.write_flowlines_to_shape(gdir, path=gdir.dir)
     shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
     shp = gpd.read_file(shp_path)
-
-    utils_vel.its_live_to_gdir(gdir,
-                               dsx=dsx, dsy=dsy,
-                               dex=dex, dey=dey,
-                               fx=fx)
 
     file_vel = xr.open_dataset(gdir.get_filepath('gridded_data'))
     proj = file_vel.attrs['pyproj_srs']
@@ -197,8 +181,8 @@ for gdir in gdirs:
 
     dvel.attrs['pyproj_srs'] = proj
 
-    ex = file_vel.obs_icevel_x_error
-    ey = file_vel.obs_icevel_y_error
+    ex = file_vel.err_icevel_x
+    ey = file_vel.err_icevel_y
     derr = np.sqrt(ex**2 + ey**2)
     derr.attrs['pyproj_srs'] = proj
 

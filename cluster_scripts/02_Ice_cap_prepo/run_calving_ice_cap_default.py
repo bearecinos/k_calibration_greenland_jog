@@ -1,6 +1,5 @@
 # This will run OGGM preprocessing task and the inversion with calving
-# For the Flade Isblink Ice Cap with default MB calibration and DEM: Glims
-
+# For the Flade Isblink Ice Cap with default MB calibration ArcticDEM
 from __future__ import division
 
 # Module logger
@@ -9,6 +8,7 @@ log = logging.getLogger(__name__)
 
 # Python imports
 import os
+import sys
 import geopandas as gpd
 import salem
 import numpy as np
@@ -22,7 +22,6 @@ from oggm import tasks
 from oggm.workflow import execute_entity_task
 from oggm import utils
 from oggm.core import inversion
-from oggm.shop import rgitopo
 
 # Time
 import time
@@ -45,14 +44,14 @@ WORKING_DIR = SLURM_WORKDIR
 cfg.PATHS['working_dir'] = WORKING_DIR
 
 MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
-config = ConfigObj(os.path.join(MAIN_PATH,'config.ini'))
+sys.path.append(MAIN_PATH)
+config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
+
+from k_tools import misc
 
 # Use multiprocessing
 cfg.PARAMS['use_multiprocessing'] = True
-
-# We make the border 20 so we can use the Columbia itmix DEM
 cfg.PARAMS['border'] = 20
-# Set to True for operational runs
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
 cfg.PARAMS['inversion_fs'] = 5.7e-20
@@ -61,6 +60,7 @@ cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
 cfg.PARAMS['use_rgi_area'] = False
+cfg.PARAMS['free_board_marine_terminating'] = 10, 150
 
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
@@ -94,7 +94,8 @@ log.info('Number of glaciers: {}'.format(len(rgidf)))
 # -----------------------------------
 gdirs = workflow.init_glacier_directories(rgidf)
 
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs, source='ARCTICDEM')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                             source='ARCTICDEM')
 
 execute_entity_task(tasks.glacier_masks, gdirs)
 
@@ -122,9 +123,13 @@ execute_entity_task(tasks.mu_star_calibration, gdirs)
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
 execute_entity_task(tasks.mass_conservation_inversion, gdirs)
 
-# Compile output
-utils.compile_glacier_statistics(gdirs,
-                                 filesuffix='_ice_cap_no_calving_with_sliding_')
+df_stats = misc.compile_exp_statistics(gdirs)
+
+filesuffix = '_ice_cap_no_calving_with_sliding_'
+
+df_stats.to_csv(os.path.join(cfg.PATHS['working_dir'],
+                                    ('glacier_statistics' +
+                                     filesuffix + '.csv')))
 
 # Log
 m, s = divmod(time.time() - start, 60)
@@ -159,6 +164,9 @@ ds.to_csv(os.path.join(WORKING_DIR,
 
 cfg.PARAMS['continue_on_error'] = True
 
-# Compile output
-utils.compile_glacier_statistics(gdirs,
-                                 filesuffix='_ice_cap_calving_with_sliding')
+df_stats_c = misc.compile_exp_statistics(gdirs)
+
+filesuffix_c = '_ice_cap_calving_with_sliding'
+
+df_stats_c.to_csv(os.path.join(cfg.PATHS['working_dir'],
+                               ('glacier_statistics' + filesuffix_c + '.csv')))

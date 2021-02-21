@@ -1,6 +1,8 @@
+cluster_scripts/01_Greenland_prepo_newoggm
 input_data
 output_data
 output_data_marco
+output_data_bkp
 plots
 dev-notebooks
 .idea

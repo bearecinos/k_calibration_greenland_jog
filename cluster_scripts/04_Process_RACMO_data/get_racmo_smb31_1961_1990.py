@@ -16,7 +16,6 @@ import oggm.cfg as cfg
 from oggm import workflow
 from oggm import tasks
 from oggm.workflow import execute_entity_task
-from oggm import utils
 
 # Module logger
 import logging
@@ -60,6 +59,7 @@ cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
+cfg.PARAMS['free_board_marine_terminating'] = 10, 150
 
 # RACMO data path
 racmo_path = os.path.join(MAIN_PATH, config['racmo_path'])
@@ -67,6 +67,12 @@ racmo_path = os.path.join(MAIN_PATH, config['racmo_path'])
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
+
+# Exclude glaciers with prepro erros
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
 
 # We use intersects
 cfg.set_intersects_db(os.path.join(MAIN_PATH, config['intercepts']))
@@ -94,12 +100,6 @@ connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
-# Exclude glaciers with prepro erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
-
 # # Run a single id for testing
 # glacier = ['RGI60-05.00304', 'RGI60-05.08443']
 # keep_indexes = [(i in glacier) for i in rgidf.RGIId]
@@ -113,9 +113,6 @@ rgidf_gimp = rgidf.iloc[keep_gimp]
 
 rgidf = rgidf.iloc[keep_indexes_no_gimp]
 
-# # Sort for more efficient parallel computing
-# rgidf = rgidf.sort_values('Area', ascending=False)
-
 log.info('Starting run for RGI reg: ' + rgi_region)
 log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
 log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
@@ -124,10 +121,12 @@ log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 # -----------------------------------
 gdirs = workflow.init_glacier_directories(rgidf)
 
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs, source='ARCTICDEM')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                             source='ARCTICDEM')
 
 gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp, source='GIMP')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+                             source='GIMP')
 
 gdirs.extend(gdirs_gimp)
 

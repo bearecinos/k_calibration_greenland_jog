@@ -30,6 +30,13 @@ output_path = os.path.join(MAIN_PATH, config['racmo_calibration_results'])
 
 # Read the RGI to store Area for statistics
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
+
+# Exclude glaciers with prepro-erros
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
+
 rgidf = rgidf.sort_values('RGIId', ascending=True)
 
 # Read Areas for the ice-cap computed in OGGM during

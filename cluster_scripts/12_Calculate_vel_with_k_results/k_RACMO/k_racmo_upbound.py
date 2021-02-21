@@ -114,6 +114,24 @@ ids_no_data = d_no_data.RGIId.values
 keep_no_data = [(i not in ids_no_data) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_no_data]
 
+
+# Read calibration results
+calibration_results_racmo = os.path.join(MAIN_PATH,
+                                            config['linear_fit_to_data'])
+
+path_to_file = os.path.join(calibration_results_racmo,
+                            'racmo_fit_calibration_results.csv')
+
+dc = pd.read_csv(path_to_file, index_col='RGIId')
+
+# Remove glaciers for which racmo SMB is negative.
+dneg = dc.loc[dc.fa_racmo > 0]
+
+dneg_ids = dneg.index.values
+keep_no_negative = [(i not in dneg_ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_no_negative]
+
+
 # Remove glaciers that need to be model with gimp
 df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
 keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
@@ -176,15 +194,6 @@ m, s = divmod(time.time() - start, 60)
 h, m = divmod(m, 60)
 log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" %
          (h, m, s))
-
-# Read calibration results
-calibration_results_racmo = os.path.join(MAIN_PATH,
-                                         config['linear_fit_to_data'])
-
-path_to_file = os.path.join(calibration_results_racmo,
-                            'racmo_fit_calibration_results.csv')
-
-dc = pd.read_csv(path_to_file, index_col='RGIId')
 
 cross = []
 surface = []

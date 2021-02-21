@@ -12,6 +12,7 @@ import shapely.geometry as shpg
 from functools import partial
 from collections import OrderedDict
 from oggm import cfg, graphics, utils
+from oggm.workflow import execute_entity_task
 import netCDF4
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
@@ -112,6 +113,15 @@ def find_nearest(array, value):
 
 def calculate_volume_percentage(volume_one, volume_two):
     return np.around((volume_two * 100) / volume_one, 2) - 100
+
+
+def compute_slr(ice_vol_km3):
+    """Farinotti 2019"""
+    ice_vol_m3 = ice_vol_km3 * 1e9
+    rho = 900
+    rho_oc = 1028
+    A_oc = 362.5 * 1e9
+    return ice_vol_m3 * rho / (A_oc * rho_oc)
 
 
 def calculate_sea_level_equivalent(value):
@@ -452,7 +462,7 @@ def get_core_data(df):
     return: df_core: core of the data set
     """
 
-    df_core = df[['rgi_id', 'rgi_region', 'rgi_subregion', 'name',
+    df_core = df[['rgi_region', 'rgi_subregion', 'name',
                   'cenlon', 'cenlat', 'rgi_area_km2', 'glacier_type',
                   'terminus_type', 'status', 'dem_source',
                   'dem_needed_interpolation', 'dem_invalid_perc',
@@ -462,7 +472,8 @@ def get_core_data(df):
                  'perc_invalid_flowline', 'inversion_glen_a', 'inversion_fs',
                  'dem_needed_extrapolation', 'dem_extrapol_perc']]
 
-    df_core['volume_before_calving'] = df_core.volume_before_calving*1e-9
+    df_core['volume_before_calving_km3'] = df_core.loc[:,
+                                       'volume_before_calving'].copy()*1e-9
 
     return df_core
 
@@ -508,22 +519,23 @@ def get_k_dependent(df, df_vel, exp_name):
     return df_dep
 
 
-def summarize_exp(df):
+def summarize_exp(df, exp_name=''):
     """
     df: dataframe of glacier statistics from which
     we will extract the calving fluxes and volumes per experiment
+    exp_name: name of the experiment to add to variables
     return: df_results: results of each exp.
     """
 
-    df_results = df[['rgi_id',
-                     'rgi_area_km2',
-                     'volume_before_calving',
-                     'inv_volume_km3',
+    df_results = df[['inv_volume_km3',
                      'calving_flux',
-                     'vbsl',
-                     'vbsl_c']]
+                     'calving_mu_star',
+                     'calving_law_flux',
+                     'calving_water_level',
+                     'calving_inversion_k',
+                     'volume_bsl']]
 
-    df_results['volume_before_calving'] = df_results.volume_before_calving*1e-9
+    df_results.columns = exp_name + df_results.columns
 
     return df_results
 
@@ -567,12 +579,70 @@ def calculate_statistics(obs, model, area_coverage, z):
                         ' m$yr^{-1}$' +
                         '\n Bias = ' + str(format(mean_dev, ".2f")) +
                         ' m$yr^{-1}$',
-                        prop=dict(size=12), frameon=True, loc=1)
+                        prop=dict(size=14), frameon=True, loc=1)
 
     zline = slope * z + intercept
     wline = 1 * z + 0
 
     return test, zline, wline
+
+
+def compile_exp_statistics(gdirs, inversion_only=False):
+    """Gather as much statistics as possible about a list of glaciers.
+
+        It can be used to do result diagnostics and other stuffs. If the data
+        necessary for a statistic is not available (e.g.: flowlines length) it
+        will simply be ignored.
+
+        Parameters
+        ----------
+        gdirs : list of :py:class:`oggm.GlacierDirectory` objects
+            the glacier directories to process
+        inversion_only : bool
+            if one wants to summarize the inversion output only (including calving)
+    """
+    out_df = execute_entity_task(utils.glacier_statistics, gdirs,
+                                 inversion_only=inversion_only)
+
+    out = pd.DataFrame(out_df).set_index('rgi_id')
+
+    vbsl_per_dir = []
+    ids = []
+    term_type = []
+
+    for gdir in gdirs:
+        inv_volume_bsl_km3 = []
+        try:
+            # Inversion
+            if gdir.has_file('inversion_output'):
+                vol = []
+                vol_bsl = []
+                vol_bwl = []
+                cl = gdir.read_pickle('inversion_output')
+                for c in cl:
+                    vol.extend(c['volume'])
+                    vol_bsl.extend(c.get('volume_bsl', [0]))
+                    vol_bwl.extend(c.get('volume_bwl', [0]))
+                # BSL / BWL
+                inv_volume_bsl_km3 = np.nansum(vol_bsl) * 1e-9
+                inv_volume_bwl_km3 = np.nansum(vol_bwl) * 1e-9
+
+                ids = np.append(ids, gdir.rgi_id)
+                term_type = np.append(term_type, gdir.terminus_type)
+                vbsl_per_dir = np.append(vbsl_per_dir,
+                                         inv_volume_bsl_km3)
+        except BaseException:
+            pass
+
+    d = {'rgi_id': ids,
+         'terminus_type': term_type,
+         'volume_bsl': vbsl_per_dir}
+
+    data_frame = pd.DataFrame(data=d).set_index('rgi_id')
+
+    result = pd.concat([out, data_frame], axis=1)
+
+    return result
 
 
 @graphics._plot_map

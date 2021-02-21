@@ -8,11 +8,12 @@ log = logging.getLogger(__name__)
 
 # Python imports
 import os
-import sys
 import geopandas as gpd
 import salem
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import sys
 from configobj import ConfigObj
 
 # Locals
@@ -20,7 +21,9 @@ import oggm.cfg as cfg
 from oggm import workflow
 from oggm import tasks
 from oggm.workflow import execute_entity_task
+from oggm import utils, graphics
 from oggm.core import inversion
+from oggm.shop import rgitopo
 
 # Time
 import time
@@ -43,14 +46,17 @@ WORKING_DIR = SLURM_WORKDIR
 cfg.PATHS['working_dir'] = WORKING_DIR
 
 MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
+config = ConfigObj(os.path.join(MAIN_PATH,'config.ini'))
 sys.path.append(MAIN_PATH)
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 
 from k_tools import misc
 
 # Use multiprocessing
 cfg.PARAMS['use_multiprocessing'] = True
+
+# We make the border 20 so we can use the Columbia itmix DEM
 cfg.PARAMS['border'] = 20
+# Set to True for operational runs
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
 cfg.PARAMS['inversion_fs'] = 5.7e-20
@@ -58,7 +64,6 @@ cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
-cfg.PARAMS['free_board_marine_terminating'] = 10, 150
 
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
@@ -86,6 +91,17 @@ connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
+# Keep glaciers with no calving solution
+# Reads racmo calibration output
+output_racmo = os.path.join(MAIN_PATH,
+                            config['racmo_calibration_results'])
+path_no_solution = os.path.join(output_racmo,
+                                      'glaciers_with_no_solution.csv')
+
+no_sol_ids = misc.read_rgi_ids_from_csv(path_no_solution)
+keep_no_solution = [(i in no_sol_ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_no_solution]
+
 # Remove glaciers that need to be model with gimp
 df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
 keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
@@ -104,12 +120,11 @@ log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 # Go - initialize working directories
 # -----------------------------------
 gdirs = workflow.init_glacier_directories(rgidf)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
-                             source='ARCTICDEM')
+
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs, source='ARCTICDEM')
 
 gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
-                             source='GIMP')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp, source='GIMP')
 
 gdirs.extend(gdirs_gimp)
 
@@ -143,49 +158,24 @@ execute_entity_task(tasks.mu_star_calibration, gdirs)
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
 execute_entity_task(tasks.mass_conservation_inversion, gdirs)
 
-df_stats = misc.compile_exp_statistics(gdirs)
+for gdir in gdirs:
+    f = plt.figure()
+    # Show/save figure as desired.
+    llkw = {'interval': 1}
+    graphics.plot_catchment_width(gdir, title=gdir.rgi_id, corrected=True,
+                                  lonlat_contours_kwargs=llkw,
+                                  add_colorbar=False, add_scalebar=False)
+    plt.savefig(os.path.join(cfg.PATHS['working_dir'],
+                             gdir.rgi_id+'.png'),
+                bbox_inches='tight')
+    plt.clf()
+    plt.close(f)
 
-filesuffix = '_greenland_no_calving_with_sliding_'
-
-df_stats.to_csv(os.path.join(cfg.PATHS['working_dir'],
-                             ('glacier_statistics' + filesuffix + '.csv')))
+# Compile output
+utils.compile_glacier_statistics(gdirs,
+                                 filesuffix='_non_calving_glaciers_')
 
 # Log
 m, s = divmod(time.time() - start, 60)
 h, m = divmod(m, 60)
 log.info("OGGM is done! Time needed: %02d:%02d:%02d" % (h, m, s))
-
-cfg.PARAMS['continue_on_error'] = False
-
-glac_errors = []
-glac_dont_calve = []
-
-# Compute a calving flux
-for gdir in gdirs:
-    try:
-        out = inversion.find_inversion_calving(gdir)
-    except:
-        print('there was an error in calving', gdir.rgi_id)
-        glac_errors = np.append(glac_errors, gdir.rgi_id)
-        pass
-    if out is None:
-        glac_dont_calve = np.append(glac_dont_calve, gdir.rgi_id)
-        pass
-
-d = {'RGIId': glac_errors}
-df = pd.DataFrame(data=d)
-df.to_csv(os.path.join(WORKING_DIR, 'glaciers_with_prepro_errors'+'.csv'))
-
-s = {'RGIId': glac_dont_calve}
-ds = pd.DataFrame(data=s)
-ds.to_csv(os.path.join(WORKING_DIR,
-                       'glaciers_dont_calve_with_cgf_params'+'.csv'))
-
-cfg.PARAMS['continue_on_error'] = True
-
-df_stats_c = misc.compile_exp_statistics(gdirs)
-
-filesuffix_c = '_greenland_calving_with_sliding'
-
-df_stats_c.to_csv(os.path.join(cfg.PATHS['working_dir'],
-                               ('glacier_statistics' + filesuffix_c + '.csv')))

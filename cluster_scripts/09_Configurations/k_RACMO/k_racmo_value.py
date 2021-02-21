@@ -7,6 +7,7 @@ import sys
 import geopandas as gpd
 import salem
 import pandas as pd
+import numpy as np
 from configobj import ConfigObj
 import time
 
@@ -15,7 +16,6 @@ import oggm.cfg as cfg
 from oggm import workflow
 from oggm import tasks
 from oggm.workflow import execute_entity_task
-from oggm import utils
 from oggm.core import inversion
 
 # Module logger
@@ -28,6 +28,9 @@ MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
 sys.path.append(MAIN_PATH)
 
 config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
+
+from k_tools import misc
+from k_tools import utils_velocity as utils_vel
 
 # Region Greenland
 rgi_region = '05'
@@ -57,10 +60,17 @@ cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
+cfg.PARAMS['free_board_marine_terminating'] = 10, 150
 
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
+
+# Exclude glaciers with prepro erros
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
 
 # We use intersects
 cfg.set_intersects_db(os.path.join(MAIN_PATH, config['intercepts']))
@@ -88,11 +98,6 @@ connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
-# Exclude glaciers with prepro erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
 
 # Reads racmo calibration output
 output_racmo = os.path.join(MAIN_PATH,
@@ -104,12 +109,26 @@ ids_rgi = d_no_sol.RGIId.values
 keep_no_solution = [(i not in ids_rgi) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_no_solution]
 
-no_racmo_data = os.path.join(output_racmo,
-                           'glaciers_with_no_racmo_data.csv')
+no_racmo_data = os.path.join(output_racmo, 'glaciers_with_no_racmo_data.csv')
 d_no_data = pd.read_csv(no_racmo_data)
 ids_no_data = d_no_data.RGIId.values
 keep_no_data = [(i not in ids_no_data) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_no_data]
+
+# Read calibration results
+calibration_results_racmo = os.path.join(MAIN_PATH,
+                                         config['linear_fit_to_data'])
+
+path_to_file = os.path.join(calibration_results_racmo,
+                            'racmo_fit_calibration_results.csv')
+
+dc = pd.read_csv(path_to_file, index_col='RGIId')
+
+# # Remove glaciers for which racmo SMB is negative.
+# dneg = dc.loc[dc.fa_racmo > 0]
+# dneg_ids = dneg.index.values
+# keep_no_negative = [(i not in dneg_ids) for i in rgidf.RGIId]
+# rgidf = rgidf.iloc[keep_no_negative]
 
 # Remove glaciers that need to be model with gimp
 df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
@@ -133,10 +152,12 @@ log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 # -----------------------------------
 gdirs = workflow.init_glacier_directories(rgidf)
 
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs, source='ARCTICDEM')
+workflow.execute_entity_task(tasks.define_glacier_region,
+                             gdirs, source='ARCTICDEM')
 
 gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp, source='GIMP')
+workflow.execute_entity_task(tasks.define_glacier_region,
+                             gdirs_gimp, source='GIMP')
 
 gdirs.extend(gdirs_gimp)
 
@@ -165,24 +186,18 @@ execute_entity_task(tasks.mu_star_calibration, gdirs)
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
 execute_entity_task(tasks.mass_conservation_inversion, gdirs)
 
-file_suffix_one = 'no_calving_k_racmo_obs_value'
-utils.compile_glacier_statistics(gdirs, filesuffix=file_suffix_one, inversion_only=True)
-
 # Log
 m, s = divmod(time.time() - start, 60)
 h, m = divmod(m, 60)
 log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" %
          (h, m, s))
 
-# Read calibration results
-calibration_results_racmo = os.path.join(MAIN_PATH,
-                                         config['linear_fit_to_data'])
-
-path_to_file = os.path.join(calibration_results_racmo,
-                            'racmo_fit_calibration_results.csv')
-
-dc = pd.read_csv(path_to_file, index_col='RGIId')
-
+cross = []
+surface = []
+flux = []
+mu_star = []
+k_used = []
+ids = []
 # Compute a calving flux
 for gdir in gdirs:
     sel = dc[dc.index == gdir.rgi_id]
@@ -191,9 +206,34 @@ for gdir in gdirs:
     cfg.PARAMS['continue_on_error'] = False
     cfg.PARAMS['inversion_calving_k'] = float(k_value)
     out = inversion.find_inversion_calving(gdir)
-    if out is None:
-        continue
 
-# Compile output
-file_suffix_two = 'calving_k_racmo_value'
-utils.compile_glacier_statistics(gdirs, filesuffix=file_suffix_two, inversion_only=True)
+    inversion.compute_velocities(gdir)
+
+    vel_out = utils_vel.calculate_model_vel(gdir)
+
+    vel_surface = vel_out[2]
+    vel_cross = vel_out[3]
+
+    cross = np.append(cross, vel_cross)
+    surface = np.append(surface, vel_surface)
+    k_used = np.append(k_used, k_value)
+    ids = np.append(ids, gdir.rgi_id)
+
+d_vel = {'rgi_id': ids,
+         'k_value': k_used,
+         'velocity_cross': cross,
+         'velocity_surf': surface}
+
+df_vel = pd.DataFrame(data=d_vel).set_index('rgi_id')
+exp_name = 'k_racmo_value_'
+df_vel.columns = exp_name + df_vel.columns
+
+df_stats = misc.compile_exp_statistics(gdirs)
+
+df_exp = misc.summarize_exp(df_stats, exp_name=exp_name)
+
+df_stats_final = pd.concat([df_exp, df_vel], axis=1)
+
+df_stats_final.to_csv(os.path.join(cfg.PATHS['working_dir'],
+                                   ('glacier_statistics_calving_' +
+                                    exp_name + '.csv')))

@@ -1,7 +1,7 @@
 # This will run OGGM and obtain velocity data from the MEaSUREs Multi-year
 # Greenland Ice Sheet Velocity Mosaic, Version 1.
-# It will give you velocity averages along the main flow-line
-# with the respective uncertainty from the MEaSUREs tiff files
+# It will give you velocity averages along the last one third of the
+# main flow-line with the respective uncertainty from the MEaSUREs tiff files
 # Python imports
 from __future__ import division
 import os
@@ -28,7 +28,7 @@ start = time.time()
 MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
 sys.path.append(MAIN_PATH)
 
-config = ConfigObj(os.path.join(MAIN_PATH,'config.ini'))
+config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 
 # velocity module
 from k_tools import utils_velocity as utils_vel
@@ -51,9 +51,7 @@ cfg.PATHS['working_dir'] = WORKING_DIR
 # Use multiprocessing
 cfg.PARAMS['use_multiprocessing'] = True
 
-# We make the border 20 so we can use the Columbia itmix DEM
 cfg.PARAMS['border'] = 20
-# Set to True for operational runs
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
 cfg.PARAMS['inversion_fs'] = 5.7e-20
@@ -61,10 +59,17 @@ cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
+cfg.PARAMS['free_board_marine_terminating'] = 10, 150
 
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
+
+# Exclude glaciers with prepro-erros
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
 
 # We use intersects
 cfg.set_intersects_db(os.path.join(MAIN_PATH, config['intercepts']))
@@ -92,12 +97,6 @@ connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
-# Exclude glaciers with prepro erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
-
 # # Run a single id for testing
 # glacier = ['RGI60-05.00304', 'RGI60-05.08443']
 # keep_indexes = [(i in glacier) for i in rgidf.RGIId]
@@ -111,9 +110,6 @@ rgidf_gimp = rgidf.iloc[keep_gimp]
 
 rgidf = rgidf.iloc[keep_indexes_no_gimp]
 
-# # Sort for more efficient parallel computing
-# rgidf = rgidf.sort_values('Area', ascending=False)
-
 log.info('Starting run for RGI reg: ' + rgi_region)
 log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
 log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
@@ -121,14 +117,14 @@ log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 # Go - initialize working directories
 # -----------------------------------
 gdirs = workflow.init_glacier_directories(rgidf)
-
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs, source='ARCTICDEM')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                             source='ARCTICDEM')
 
 gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp, source='GIMP')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+                             source='GIMP')
 
 gdirs.extend(gdirs_gimp)
-
 
 # Pre-pro tasks
 task_list = [
@@ -160,8 +156,10 @@ length_fls = []
 
 files_no_data = []
 
-dvel = utils_vel.open_vel_raster(os.path.join(MAIN_PATH, config['vel_path']))
-derr = utils_vel.open_vel_raster(os.path.join(MAIN_PATH, config['error_vel_path']))
+dvel = utils_vel.open_vel_raster(os.path.join(MAIN_PATH,
+                                              config['vel_path']))
+derr = utils_vel.open_vel_raster(os.path.join(MAIN_PATH,
+                                              config['error_vel_path']))
 
 for gdir in gdirs:
 
