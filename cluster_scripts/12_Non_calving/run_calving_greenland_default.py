@@ -117,9 +117,6 @@ rgidf_gimp = rgidf.iloc[keep_gimp]
 
 rgidf = rgidf.iloc[keep_indexes_no_gimp]
 
-# Sort for more efficient parallel computing
-rgidf = rgidf.sort_values('Area', ascending=False)
-
 log.info('Starting run for RGI reg: ' + rgi_region)
 log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
 log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
