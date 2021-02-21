@@ -1,5 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=config_runs
+#
+#SBATCH --job-name=greenland_plot
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --time=24:00:00
@@ -20,7 +21,7 @@ echo "Workdir for this run: $WORKDIR"
 export WORKDIR
 
 # Run the actual job. The srun invocation starts it as individual step for slurm.
-srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec docker://oggm/oggm:latest bash -s <<EOF
+srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec docker://oggm/oggm:20201118 bash -s <<EOF
   set -e
 
   python3 -m venv --system-site-packages "$WORKDIR/oggm_env"
@@ -29,11 +30,12 @@ srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec docker://oggm/oggm:la
   pip install --upgrade pip setuptools wheel
   pip install --upgrade "git+https://github.com/OGGM/oggm.git@e20e673a0e50151f5a195ba29e1890d8447fd3e7"
   pip install --upgrade xlrd
+  pip install --upgrade seaborn
 
   export OGGM_DOWNLOAD_CACHE=/home/data/download
   export OGGM_DOWNLOAD_CACHE_RO=1
 
-  python3 "$@"
+  python3 ./data_input_prepro.py
 EOF
 
 echo "Start copying..."
@@ -41,13 +43,12 @@ echo "Start copying..."
 # Once a slurm job is done, slurm will clean up the /work directory on that node from any leftovers from that user.
 # So copy any result data you need from there back to your home dir!
 # $SLURM_SUBMIT_DIR points to the directory from where the job was initially commited.
-OUTDIR="$HOME/k_calibration_greenland_new/output_data/12_Calculate_vel_with_k_results/${1/.py/}/"
+OUTDIR="$HOME/k_calibration_greenland_new/output_data/12_input_data_plot/"
 mkdir -p "$OUTDIR"
 
 # Copy any neccesary result data.
-#cp -R "${WORKDIR}/per_glacier"* "${OUTDIR}/"
-cp -R "${WORKDIR}/"*.csv "${OUTDIR}/"
+# cp -R "${WORKDIR}/per_glacier"* "${OUTDIR}/"
+cp -R "${WORKDIR}/"*.png "${OUTDIR}/"
 
 # Print a final message so you can actually see it being done in the output log.
 echo "SLURM DONE"
-

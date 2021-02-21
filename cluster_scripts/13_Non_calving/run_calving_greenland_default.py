@@ -1,57 +1,51 @@
-# This will run k x factors experiment only for MT
-# and compute model surface velocity and frontal ablation fluxes
-# per TW glacier in Greenland
+# This will run OGGM preprocessing task and the inversion with calving
+# For Greenland with default MB calibration and DEM: Glims
 from __future__ import division
+import logging
 import os
-import sys
 import geopandas as gpd
 import salem
 import pandas as pd
+import matplotlib.pyplot as plt
+import sys
 from configobj import ConfigObj
-import time
-import numpy as np
-
-# Imports oggm
+# Locals
 import oggm.cfg as cfg
 from oggm import workflow
 from oggm import tasks
 from oggm.workflow import execute_entity_task
-from oggm.core import inversion
-
-# Module logger
-import logging
-log = logging.getLogger(__name__)
+from oggm import graphics
 # Time
+import time
 start = time.time()
+# Module logger
+log = logging.getLogger(__name__)
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
-sys.path.append(MAIN_PATH)
-
-from k_tools import utils_velocity as utils_vel
-
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
-
-# Region Greenland
+# Regions:
+# Greenland
 rgi_region = '05'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------
 
 cfg.initialize()
+
 rgi_version = '61'
 
 SLURM_WORKDIR = os.environ["WORKDIR"]
-
 # Local paths (where to write output and where to download input)
 WORKING_DIR = SLURM_WORKDIR
 cfg.PATHS['working_dir'] = WORKING_DIR
 
+MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
+sys.path.append(MAIN_PATH)
+config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
+
+from k_tools import misc
+
 # Use multiprocessing
 cfg.PARAMS['use_multiprocessing'] = True
-
-# We make the border 20 so we can use the Columbia itmix DEM
 cfg.PARAMS['border'] = 20
-# Set to True for operational runs
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
 cfg.PARAMS['inversion_fs'] = 5.7e-20
@@ -59,10 +53,17 @@ cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
+cfg.PARAMS['free_board_marine_terminating'] = 10, 150
 
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
+
+# Exclude glaciers with prepro erros
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
 
 # We use intersects
 cfg.set_intersects_db(os.path.join(MAIN_PATH, config['intercepts']))
@@ -79,39 +80,34 @@ df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
 rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
           'Area'] = df_prepro_ic.rgi_area_km2.values
 
-# Run only for Lake Terminating and Marine Terminating
+# # Get glaciers that belong to the ice cap.
+# rgidf_ice_cap = rgidf[rgidf['RGIId'].str.match('RGI60-05.10315')]
+# # Get the id's for filter
+# ice_cap_ids = rgidf_ice_cap.RGIId.values
+
+# # Removing the Ice cap
+# keep_indexes = [(i not in ice_cap_ids) for i in rgidf.RGIId]
+# rgidf = rgidf.iloc[keep_indexes]
+
+# Remove Land-terminating
 glac_type = ['0']
 keep_glactype = [(i not in glac_type) for i in rgidf.TermType]
 rgidf = rgidf.iloc[keep_glactype]
 
-# Run only glaciers that have a week connection or are
-# not connected to the ice-sheet
+# Remove glaciers with strong connection to the ice sheet
 connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
-# Exclude glaciers with prepro erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
+# Keep glaciers with no calving solution
+# Reads racmo calibration output
+output_racmo = os.path.join(MAIN_PATH,
+                            config['racmo_calibration_results'])
+path_no_solution = os.path.join(output_racmo, 'glaciers_with_no_solution.csv')
 
-# Reas itslive calibration output
-output_itslive = os.path.join(MAIN_PATH,
-                              config['vel_calibration_results_itslive'])
-
-no_solution = os.path.join(output_itslive, 'glaciers_with_no_solution.csv')
-d_no_sol = pd.read_csv(no_solution)
-ids_rgi = d_no_sol.RGIId.values
-keep_no_solution = [(i not in ids_rgi) for i in rgidf.RGIId]
+no_sol_ids = misc.read_rgi_ids_from_csv(path_no_solution)
+keep_no_solution = [(i in no_sol_ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_no_solution]
-
-no_vel_data = os.path.join(output_itslive,
-                           'glaciers_with_no_vel_data.csv')
-d_no_data = pd.read_csv(no_vel_data)
-ids_no_data = d_no_data.RGIId.values
-keep_no_data = [(i not in ids_no_data) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_no_data]
 
 # Remove glaciers that need to be model with gimp
 df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
@@ -121,10 +117,8 @@ rgidf_gimp = rgidf.iloc[keep_gimp]
 
 rgidf = rgidf.iloc[keep_indexes_no_gimp]
 
-# # Run a single id for testing
-# glacier = ['RGI60-05.00304', 'RGI60-05.08443']
-# keep_indexes = [(i in glacier) for i in rgidf.RGIId]
-# rgidf = rgidf.iloc[keep_indexes]
+# Sort for more efficient parallel computing
+rgidf = rgidf.sort_values('Area', ascending=False)
 
 log.info('Starting run for RGI reg: ' + rgi_region)
 log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
@@ -134,14 +128,16 @@ log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 # -----------------------------------
 gdirs = workflow.init_glacier_directories(rgidf)
 
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs, source='ARCTICDEM')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                             source='ARCTICDEM')
 
 gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp, source='GIMP')
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+                             source='GIMP')
 
 gdirs.extend(gdirs_gimp)
 
-# Prepro tasks
+# Calculate the Pre-processing tasks
 task_list = [
     tasks.glacier_masks,
     tasks.compute_centerlines,
@@ -151,6 +147,7 @@ task_list = [
     tasks.catchment_width_geom,
     tasks.catchment_width_correction,
 ]
+
 for task in task_list:
     execute_entity_task(task, gdirs)
 
@@ -166,57 +163,27 @@ execute_entity_task(tasks.mu_star_calibration, gdirs)
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
 execute_entity_task(tasks.mass_conservation_inversion, gdirs)
 
-# file_suffix_one = 'no_calving_k_itslive_obs_value'
-# utils.compile_glacier_statistics(gdirs, filesuffix=file_suffix_one, inversion_only=True)
+for gdir in gdirs:
+    f = plt.figure()
+    # Show/save figure as desired.
+    llkw = {'interval': 1}
+    graphics.plot_catchment_width(gdir, title=gdir.rgi_id, corrected=True,
+                                  lonlat_contours_kwargs=llkw,
+                                  add_colorbar=False, add_scalebar=False)
+    plt.savefig(os.path.join(cfg.PATHS['working_dir'],
+                             gdir.rgi_id+'.png'),
+                bbox_inches='tight')
+    plt.clf()
+    plt.close(f)
+
+# Compile output
+df_stats = misc.compile_exp_statistics(gdirs)
+
+filesuffix = '_non_calving_glaciers_'
+df_stats.to_csv(os.path.join(cfg.PATHS['working_dir'],
+                             ('glacier_statistics' + filesuffix + '.csv')))
 
 # Log
 m, s = divmod(time.time() - start, 60)
 h, m = divmod(m, 60)
-log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" %
-         (h, m, s))
-
-# Read calibration results
-calibration_results_itslive = os.path.join(MAIN_PATH,
-                                           config['linear_fit_to_data'])
-
-path_to_file = os.path.join(calibration_results_itslive,
-                            'velocity_fit_calibration_results_itslive.csv')
-
-dc = pd.read_csv(path_to_file, index_col='RGIId')
-
-cross = []
-surface = []
-flux = []
-mu_star = []
-k_used = []
-ids = []
-
-# Compute a calving flux
-for gdir in gdirs:
-    sel = dc[dc.index == gdir.rgi_id]
-    k_value = sel.k_for_obs_value.values
-
-    cfg.PARAMS['inversion_calving_k'] = float(k_value)
-    inversion.find_inversion_calving(gdir)
-
-    inversion.compute_velocities(gdir)
-
-    vel_out = utils_vel.calculate_model_vel(gdir)
-
-    vel_surface = vel_out[2]
-    vel_cross = vel_out[3]
-
-    cross = np.append(cross, vel_cross)
-    surface = np.append(surface, vel_surface)
-    k_used = np.append(k_used, k_value)
-    ids = np.append(ids, gdir.rgi_id)
-
-d = {'rgi_id': ids,
-     'k_values': k_used,
-     'velocity_cross': cross,
-     'velocity_surf': surface}
-
-df = pd.DataFrame(data=d)
-
-df.to_csv(os.path.join(cfg.PATHS['working_dir'],
-                       'k_itslive_obs_value_velocity_data.csv'))
+log.info("OGGM is done! Time needed: %02d:%02d:%02d" % (h, m, s))

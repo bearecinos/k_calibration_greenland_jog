@@ -12,7 +12,7 @@ import matplotlib.gridspec as gridspec
 import seaborn as sns
 import pandas as pd
 import geopandas as gpd
-from oggm import cfg, utils, workflow, graphics, tasks
+from oggm import cfg, workflow, graphics, tasks
 from oggm.workflow import execute_entity_task
 from oggm.core import inversion
 from oggm.shop import its_live
@@ -66,16 +66,19 @@ smb_path = os.path.join(racmo_main_path,
                         'smb_rec.1958-2018.BN_RACMO2.3p2_FGRN055_GrIS.MM.nc')
 
 ds_smb = utils_racmo.open_racmo(smb_path, mask_file)
-dsc = xr.open_dataset(smb_path, decode_times=False)#.chunk({'time':20})
+# .chunk({'time':20})
+dsc = xr.open_dataset(smb_path, decode_times=False)
 dsc.attrs['pyproj_srs'] = proj.srs
 
 dsc['time'] = np.append(pd.period_range(start='2018.01.01',
-                                    end='2018.12.01', freq='M').to_timestamp(),
-                           pd.period_range(start='1958.01.01',
-                                    end='2017.12.01', freq='M').to_timestamp())
+                                        end='2018.12.01',
+                                        freq='M').to_timestamp(),
+                        pd.period_range(start='1958.01.01',
+                                        end='2017.12.01',
+                                        freq='M').to_timestamp())
 
-ds_smb_two = dsc.isel(time=slice(48,12*34))
-#see = ds_smb_two.chunk({'time':2})
+ds_smb_two = dsc.isel(time=slice(48, 12*34))
+# see = ds_smb_two.chunk({'time':2})
 avg = ds_smb_two.SMB_rec.mean(dim='time').compute()
 
 # OGGM run
@@ -101,12 +104,24 @@ execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
 execute_entity_task(tasks.mass_conservation_inversion, gdirs,
                     filesuffix='_without_calving_')
 
+# Read calibration results
+calibration_results_itslive = os.path.join(MAIN_PATH,
+                                           config['linear_fit_to_data'])
+
+path_to_file = os.path.join(calibration_results_itslive,
+                            'velocity_fit_calibration_results_itslive.csv')
+
+dc = pd.read_csv(path_to_file, index_col='RGIId')
+
 for gdir in gdirs:
+    sel = dc[dc.index == gdir.rgi_id]
+    k_value = sel.k_for_obs_value.values
+
     cfg.PARAMS['continue_on_error'] = False
-    cfg.PARAMS['inversion_calving_k'] = 0.759134306038709
+    cfg.PARAMS['inversion_calving_k'] = float(k_value)
     out = inversion.find_inversion_calving(gdir)
 
-gdir=gdirs[0]
+gdir = gdirs[0]
 
 misc.write_flowlines_to_shape(gdir, path=gdir.dir)
 shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
@@ -134,19 +149,21 @@ vel_itslive = np.sqrt(vx**2 + vy**2)
 ds_sel = utils_racmo.crop_racmo_to_glacier_grid(gdir, ds_smb)
 # The time info is horrible
 ds_sel['time'] = np.append(pd.period_range(start='2018.01.01',
-                                    end='2018.12.01', freq='M').to_timestamp(),
+                                           end='2018.12.01',
+                                           freq='M').to_timestamp(),
                            pd.period_range(start='1958.01.01',
-                                    end='2017.12.01', freq='M').to_timestamp())
+                                           end='2017.12.01',
+                                           freq='M').to_timestamp())
 
 # We select the time that we need 1960-1990
-ds_smb_two_sel = ds_sel.isel(time=slice(48,12*34))
-#ds_smb_time_sel = ds_smb_two_sel.chunk({'time':2})
+ds_smb_two_sel = ds_sel.isel(time=slice(48, 12*34))
+# ds_smb_time_sel = ds_smb_two_sel.chunk({'time':2})
 
 smb_avg_sel = ds_smb_two_sel.SMB_rec.mean(dim='time', skipna=True).compute()
 
 print('Done calculating')
 
-#Now plotting
+# Now plotting
 fig1 = plt.figure(figsize=(16, 15), constrained_layout=True)
 
 widths = [2, 2, 2]
@@ -160,22 +177,22 @@ llkw = {'interval': 1}
 ax0 = plt.subplot(spec[0])
 graphics.plot_centerlines(gdir, ax=ax0, title='', add_colorbar=True,
                           lonlat_contours_kwargs=llkw, add_scalebar=False)
-at = AnchoredText('a', prop=dict(size=18), frameon=True, loc=2)
+at = AnchoredText('a', prop=dict(size=18), frameon=True, loc='upper left')
 ax0.add_artist(at)
 
 ax1 = plt.subplot(spec[1])
 graphics.plot_catchment_width(gdir, ax=ax1, title='', corrected=True,
                               lonlat_contours_kwargs=llkw,
                               add_colorbar=False, add_scalebar=False)
-at = AnchoredText('b', prop=dict(size=18), frameon=True, loc=2)
+at = AnchoredText('b', prop=dict(size=18), frameon=True, loc='upper left')
 ax1.add_artist(at)
 
 ax2 = plt.subplot(spec[2])
 misc.plot_inversion_diff(gdirs, ax=ax2, title='', linewidth=2,
-                            add_colorbar=True,
-                            lonlat_contours_kwargs=llkw,
-                            add_scalebar=False)
-at = AnchoredText('c', prop=dict(size=18), frameon=True, loc=2)
+                         add_colorbar=True,
+                         lonlat_contours_kwargs=llkw,
+                         add_scalebar=False)
+at = AnchoredText('c', prop=dict(size=18), frameon=True, loc='upper left')
 ax2.add_artist(at)
 
 ax3 = plt.subplot(spec[3])
@@ -187,11 +204,10 @@ sm.set_vmin(0)
 sm.set_vmax(200)
 x_conect, y_conect = sm.grid.transform(gdir.cenlon, gdir.cenlat)
 ax3.scatter(x_conect, y_conect, s=80, marker="o", color='red')
-ax3.text(x_conect, y_conect, s = gdir.rgi_id,
-         color=sns.xkcd_rgb["white"],
-         weight = 'black', fontsize=12)
+ax3.text(x_conect, y_conect, s=gdir.rgi_id, color=sns.xkcd_rgb["white"],
+         weight='black', fontsize=12)
 sm.visualize(ax=ax3, cbar_title='MEaSUREs velocity \n [m/yr]')
-at = AnchoredText('d', prop=dict(size=18), frameon=True, loc=2)
+at = AnchoredText('d', prop=dict(size=18), frameon=True, loc='upper left')
 ax3.add_artist(at)
 
 ax4 = plt.subplot(spec[4])
@@ -203,11 +219,11 @@ sm.set_vmin(0)
 sm.set_vmax(200)
 x_conect, y_conect = sm.grid.transform(gdir.cenlon, gdir.cenlat)
 ax4.scatter(x_conect, y_conect, s=80, marker="o", color='red')
-ax4.text(x_conect, y_conect, s = gdir.rgi_id,
+ax4.text(x_conect, y_conect, s=gdir.rgi_id,
          color=sns.xkcd_rgb["white"],
-         weight = 'black', fontsize=12)
+         weight='black', fontsize=12)
 sm.visualize(ax=ax4, cbar_title='ITSlive velocity \n [m/yr]')
-at = AnchoredText('e', prop=dict(size=18), frameon=True, loc=2)
+at = AnchoredText('e', prop=dict(size=18), frameon=True, loc='upper left')
 ax4.add_artist(at)
 
 ax5 = plt.subplot(spec[5])
@@ -217,14 +233,14 @@ sm.set_data(avg)
 sm.set_cmap('RdBu')
 x_conect, y_conect = sm.grid.transform(gdir.cenlon, gdir.cenlat)
 ax5.scatter(x_conect, y_conect, s=80, marker="o", color='red')
-ax5.text(x_conect, y_conect, s = gdir.rgi_id,
+ax5.text(x_conect, y_conect, s=gdir.rgi_id,
          color=sns.xkcd_rgb["black"],
-         weight = 'black', fontsize=10)
-#sm.set_scale_bar(location=(0.78, 0.04))
+         weight='black', fontsize=10)
+# sm.set_scale_bar(location=(0.78, 0.04))
 sm.set_vmin(-200)
 sm.set_vmax(200)
 sm.visualize(ax=ax5, cbar_title='SMB mean 61-90 \n [mm. w.e]')
-at = AnchoredText('f', prop=dict(size=18), frameon=True, loc=2)
+at = AnchoredText('f', prop=dict(size=18), frameon=True, loc='upper left')
 ax5.add_artist(at)
 
 ax6 = plt.subplot(spec[6])
@@ -237,7 +253,7 @@ sm.set_vmin(0)
 sm.set_vmax(200)
 sm.set_lonlat_contours(interval=1)
 sm.visualize(ax=ax6, addcbar=False)
-at = AnchoredText('g', prop=dict(size=18), frameon=True, loc=2)
+at = AnchoredText('g', prop=dict(size=18), frameon=True, loc='upper left')
 ax6.add_artist(at)
 
 
@@ -251,7 +267,7 @@ sm.set_vmin(0)
 sm.set_vmax(200)
 sm.set_lonlat_contours(interval=1)
 sm.visualize(ax=ax7, addcbar=False)
-at = AnchoredText('h', prop=dict(size=18), frameon=True, loc=2)
+at = AnchoredText('h', prop=dict(size=18), frameon=True, loc='upper left')
 ax7.add_artist(at)
 
 ax8 = plt.subplot(spec[8])
@@ -262,10 +278,10 @@ sm.set_cmap('RdBu')
 sm.set_scale_bar(location=(0.76, 0.04))
 sm.set_lonlat_contours(interval=1)
 sm.visualize(ax=ax8, addcbar=True)
-at = AnchoredText('i', prop=dict(size=18), frameon=True, loc=2)
+at = AnchoredText('i', prop=dict(size=18), frameon=True, loc='upper left')
 ax8.add_artist(at)
 
 # plt.show()
 plt.savefig(os.path.join(cfg.PATHS['working_dir'],
                          'data_input_plot_all.png'),
-                            bbox_inches='tight')
+            bbox_inches='tight')
