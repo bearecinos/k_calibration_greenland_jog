@@ -642,6 +642,8 @@ def compile_exp_statistics(gdirs, inversion_only=False):
 
     result = pd.concat([out, data_frame], axis=1)
 
+    result.index.name = 'rgi_id'
+
     return result
 
 

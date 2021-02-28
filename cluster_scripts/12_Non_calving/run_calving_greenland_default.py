@@ -5,7 +5,9 @@ import logging
 import os
 import geopandas as gpd
 import salem
+import xarray as xr
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from configobj import ConfigObj
@@ -15,6 +17,7 @@ from oggm import workflow
 from oggm import tasks
 from oggm.workflow import execute_entity_task
 from oggm import graphics
+from oggm.shop import its_live
 # Time
 import time
 start = time.time()
@@ -53,17 +56,10 @@ cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
-cfg.PARAMS['free_board_marine_terminating'] = 10, 150
 
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
-
-# Exclude glaciers with prepro erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
 
 # We use intersects
 cfg.set_intersects_db(os.path.join(MAIN_PATH, config['intercepts']))
@@ -99,6 +95,12 @@ connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
+# Exclude glaciers with prepro erros
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
+
 # Keep glaciers with no calving solution
 # Reads racmo calibration output
 output_racmo = os.path.join(MAIN_PATH,
@@ -109,17 +111,22 @@ no_sol_ids = misc.read_rgi_ids_from_csv(path_no_solution)
 keep_no_solution = [(i in no_sol_ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_no_solution]
 
-# Remove glaciers that need to be model with gimp
-df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
-keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
-keep_gimp = [(i in df_gimp.RGIId.values) for i in rgidf.RGIId]
-rgidf_gimp = rgidf.iloc[keep_gimp]
+# Run a single id for testing
+glacier = ['RGI60-05.00119', 'RGI60-05.00151']
+keep_indexes = [(i in glacier) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_indexes]
 
-rgidf = rgidf.iloc[keep_indexes_no_gimp]
-
-log.info('Starting run for RGI reg: ' + rgi_region)
-log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
-log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
+# # Remove glaciers that need to be model with gimp
+# df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
+# keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
+# keep_gimp = [(i in df_gimp.RGIId.values) for i in rgidf.RGIId]
+# rgidf_gimp = rgidf.iloc[keep_gimp]
+#
+# rgidf = rgidf.iloc[keep_indexes_no_gimp]
+#
+# log.info('Starting run for RGI reg: ' + rgi_region)
+# log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
+# log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 
 # Go - initialize working directories
 # -----------------------------------
@@ -128,11 +135,11 @@ gdirs = workflow.init_glacier_directories(rgidf)
 workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
                              source='ARCTICDEM')
 
-gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
-                             source='GIMP')
-
-gdirs.extend(gdirs_gimp)
+# gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
+# workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+#                              source='GIMP')
+#
+# gdirs.extend(gdirs_gimp)
 
 # Calculate the Pre-processing tasks
 task_list = [
@@ -160,7 +167,17 @@ execute_entity_task(tasks.mu_star_calibration, gdirs)
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
 execute_entity_task(tasks.mass_conservation_inversion, gdirs)
 
+workflow.execute_entity_task(its_live.velocity_to_gdir, gdirs, add_error=True)
+
 for gdir in gdirs:
+    with xr.open_dataset(gdir.get_filepath('gridded_data')) as ds:
+        ds = ds.load()
+
+    # get the wind data at 10000 m a.s.l.
+    u = ds.obs_icevel_x.where(ds.glacier_mask == 1)
+    v = ds.obs_icevel_y.where(ds.glacier_mask == 1)
+    ws = (u ** 2 + v ** 2) ** 0.5
+
     f = plt.figure()
     # Show/save figure as desired.
     llkw = {'interval': 1}
@@ -170,6 +187,16 @@ for gdir in gdirs:
     plt.savefig(os.path.join(cfg.PATHS['working_dir'],
                              gdir.rgi_id+'.png'),
                 bbox_inches='tight')
+    plt.clf()
+    plt.close(f)
+
+    f, ax = plt.subplots(figsize=(9, 9))
+    smap = ds.salem.get_map(countries=False)
+    smap.set_shapefile(gdir.read_shapefile('outlines'))
+    smap.set_data(ws)
+    smap.set_cmap('Blues')
+    smap.plot(ax=ax)
+    smap.append_colorbar(ax=ax)
     plt.clf()
     plt.close(f)
 

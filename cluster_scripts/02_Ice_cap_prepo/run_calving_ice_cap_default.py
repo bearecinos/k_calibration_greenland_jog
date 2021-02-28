@@ -60,7 +60,6 @@ cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
 cfg.PARAMS['use_rgi_area'] = False
-cfg.PARAMS['free_board_marine_terminating'] = 10, 150
 
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
@@ -78,14 +77,14 @@ ice_cap_ids = rgidf_ice_cap.RGIId.values
 keep_indexes = [(i in ice_cap_ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_indexes]
 
-# Remove pre-pro errors
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
+# # Remove pre-pro errors
+# de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+# ids = de.RGIId.values
+# keep_errors = [(i not in ids) for i in rgidf.RGIId]
+# rgidf = rgidf.iloc[keep_errors]
 
-# Sort for more efficient parallel computing
-rgidf = rgidf.sort_values('Area', ascending=False)
+# # Sort for more efficient parallel computing
+# rgidf = rgidf.sort_values('Area', ascending=False)
 
 log.info('Starting run for RGI reg: ' + rgi_region)
 log.info('Number of glaciers: {}'.format(len(rgidf)))
