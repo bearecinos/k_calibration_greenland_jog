@@ -26,66 +26,66 @@ sns.set_context('poster')
 # Paths to data
 plot_path = os.path.join(MAIN_PATH, 'plots/')
 
-output_dir_path = os.path.join(MAIN_PATH, 'output_data/13_Merged_data_test/')
+output_dir_path = os.path.join(MAIN_PATH, 'output_data/13_Merged_data/')
 
 df_common = pd.read_csv(os.path.join(output_dir_path,
                                      'common_final_results.csv'))
 
 # list of variables to plot
 df_to_plot = df_common[[
-    'rgi_area_km2',
-    'calving_front_width',
-    'calving_flux_k_itslive_lowbound',
-    'calving_front_thick_k_itslive_lowbound',
-    'calving_inversion_k_k_itslive_lowbound',
-    'calving_flux_k_itslive_value',
-    'calving_front_thick_k_itslive_value',
-    'calving_inversion_k_k_itslive_value',
-    'calving_flux_k_itslive_upbound',
-    'calving_front_thick_k_itslive_upbound',
-    'calving_inversion_k_k_itslive_upbound',
-    'calving_flux_k_measures_lowbound',
-    'calving_front_thick_k_measures_lowbound',
-    'calving_inversion_k_k_measures_lowbound',
-    'calving_flux_k_measures_value',
-    'calving_front_thick_k_measures_value',
-    'calving_inversion_k_k_measures_value',
-    'calving_flux_k_measures_upbound',
-    'calving_front_thick_k_measures_upbound',
-    'calving_inversion_k_k_measures_upbound',
-    'calving_flux_k_racmo_lowbound',
-    'calving_front_thick_k_racmo_lowbound',
-    'calving_inversion_k_k_racmo_lowbound',
-    'calving_flux_k_racmo_value',
-    'calving_front_thick_k_racmo_value',
-    'calving_inversion_k_k_racmo_value',
-    'calving_flux_k_racmo_upbound',
-    'calving_front_thick_k_racmo_upbound',
-    'calving_inversion_k_k_racmo_upbound']]
+                        'rgi_area_km2_x',
+                        'calving_front_width_x',
+                        'k_itslive_lowbound_calving_flux',
+                        'k_itslive_lowbound_calving_inversion_k',
+                        'k_itslive_lowbound_calving_front_thick',
+                        'k_itslive_value_calving_flux',
+                        'k_itslive_value_calving_inversion_k',
+                        'k_itslive_value_calving_front_thick',
+                        'k_itslive_upbound_calving_flux',
+                        'k_itslive_upbound_calving_inversion_k',
+                        'k_itslive_upbound_calving_front_thick',
+                        'k_measures_lowbound_calving_flux',
+                        'k_measures_lowbound_calving_inversion_k',
+                        'k_measures_lowbound_calving_front_thick',
+                        'k_measures_value_calving_flux',
+                        'k_measures_value_calving_inversion_k',
+                        'k_measures_value_calving_front_thick',
+                        'k_measures_upbound_calving_flux',
+                        'k_measures_upbound_calving_inversion_k',
+                        'k_measures_upbound_calving_front_thick',
+                        'k_racmo_lowbound_calving_flux',
+                        'k_racmo_lowbound_calving_inversion_k',
+                        'k_racmo_lowbound_calving_front_thick',
+                        'k_racmo_value_calving_flux',
+                        'k_racmo_value_calving_inversion_k',
+                        'k_racmo_value_calving_front_thick',
+                        'k_racmo_upbound_calving_flux',
+                        'k_racmo_upbound_calving_inversion_k',
+                        'k_racmo_upbound_calving_front_thick']]
 
 df_to_plot.loc[:,
-('calving_rate_k_itslive_lowbound')] = (df_to_plot['calving_flux_k_itslive_lowbound']*1e9)/(df_to_plot['calving_front_thick_k_itslive_lowbound']*df_to_plot['calving_front_width'])
+('k_itslive_lowbound_calving_rate')] = (df_to_plot['k_itslive_lowbound_calving_flux']*1e9)/(df_to_plot['k_itslive_lowbound_calving_front_thick']*df_to_plot['calving_front_width_x'])
 df_to_plot.loc[:,
-('calving_rate_k_itslive_value')] = (df_to_plot['calving_flux_k_itslive_value']*1e9)/(df_to_plot['calving_front_thick_k_itslive_value']*df_to_plot['calving_front_width'])
+('k_itslive_value_calving_rate')] = (df_to_plot['k_itslive_value_calving_flux']*1e9)/(df_to_plot['k_itslive_value_calving_front_thick']*df_to_plot['calving_front_width_x'])
 df_to_plot.loc[:,
-('calving_rate_k_itslive_upbound')] = (df_to_plot['calving_flux_k_itslive_upbound']*1e9)/(df_to_plot['calving_front_thick_k_itslive_upbound']*df_to_plot['calving_front_width'])
+('k_itslive_upbound_calving_rate')] = (df_to_plot['k_itslive_upbound_calving_flux']*1e9)/(df_to_plot['k_itslive_upbound_calving_front_thick']*df_to_plot['calving_front_width_x'])
 
 df_to_plot.loc[:,
-('calving_rate_k_measures_lowbound')] = (df_to_plot['calving_flux_k_measures_lowbound']*1e9)/(df_to_plot['calving_front_thick_k_measures_lowbound']*df_to_plot['calving_front_width'])
+('k_measures_lowbound_calving_rate')] = (df_to_plot['k_measures_lowbound_calving_flux']*1e9)/(df_to_plot['k_measures_lowbound_calving_front_thick']*df_to_plot['calving_front_width_x'])
 df_to_plot.loc[:,
-('calving_rate_k_measures_value')] = (df_to_plot['calving_flux_k_measures_value']*1e9)/(df_to_plot['calving_front_thick_k_measures_value']*df_to_plot['calving_front_width'])
+('k_measures_value_calving_rate')] = (df_to_plot['k_measures_value_calving_flux']*1e9)/(df_to_plot['k_measures_value_calving_front_thick']*df_to_plot['calving_front_width_x'])
 df_to_plot.loc[:,
-('calving_rate_k_measures_upbound')] = (df_to_plot['calving_flux_k_measures_upbound']*1e9)/(df_to_plot['calving_front_thick_k_measures_upbound']*df_to_plot['calving_front_width'])
+('k_measures_upbound_calving_rate')] = (df_to_plot['k_measures_upbound_calving_flux']*1e9)/(df_to_plot['k_measures_upbound_calving_front_thick']*df_to_plot['calving_front_width_x'])
 
 df_to_plot.loc[:,
-('calving_rate_k_racmo_lowbound')] = (df_to_plot['calving_flux_k_racmo_lowbound']*1e9)/(df_to_plot['calving_front_thick_k_racmo_lowbound']*df_to_plot['calving_front_width'])
+('k_racmo_lowbound_calving_rate')] = (df_to_plot['k_racmo_lowbound_calving_flux']*1e9)/(df_to_plot['k_racmo_lowbound_calving_front_thick']*df_to_plot['calving_front_width_x'])
 df_to_plot.loc[:,
-('calving_rate_k_racmo_value')] = (df_to_plot['calving_flux_k_racmo_value']*1e9)/(df_to_plot['calving_front_thick_k_racmo_value']*df_to_plot['calving_front_width'])
+('k_racmo_value_calving_rate')] = (df_to_plot['k_racmo_value_calving_flux']*1e9)/(df_to_plot['k_racmo_value_calving_front_thick']*df_to_plot['calving_front_width_x'])
 df_to_plot.loc[:,
-('calving_rate_k_racmo_upbound')] = (df_to_plot['calving_flux_k_racmo_upbound']*1e9)/(df_to_plot['calving_front_thick_k_racmo_upbound']*df_to_plot['calving_front_width'])
+('k_racmo_upbound_calving_rate')] = (df_to_plot['k_racmo_upbound_calving_flux']*1e9)/(df_to_plot['k_racmo_upbound_calving_front_thick']*df_to_plot['calving_front_width_x'])
 
 # Classify the glaciers by area classes
-df_to_plot["area_class"] = np.digitize(df_to_plot["rgi_area_km2"],
+df_to_plot["area_class"] = np.digitize(df_to_plot["rgi_area_km2_x"],
                                        [0, 5, 15, 50, 1300],
                                        right=True)
 
@@ -123,20 +123,20 @@ df_to_plot["area_class"] = np.digitize(df_to_plot["rgi_area_km2"],
 #                         'calving_rate_k_racmo_upbound',
 #                         'area_class']]
 #
-to_plot_k = df_to_plot[['calving_inversion_k_k_measures_value',
-                        'calving_inversion_k_k_itslive_value',
-                        'calving_inversion_k_k_racmo_value',
+to_plot_k = df_to_plot[['k_measures_value_calving_inversion_k',
+                        'k_itslive_value_calving_inversion_k',
+                        'k_racmo_value_calving_inversion_k',
                         'area_class']]
 
-to_plot_q = df_to_plot[['calving_flux_k_measures_value',
-                        'calving_flux_k_itslive_value',
-                        'calving_flux_k_racmo_value',
+to_plot_q = df_to_plot[['k_measures_value_calving_flux',
+                        'k_itslive_value_calving_flux',
+                        'k_racmo_value_calving_flux',
                         'area_class']]
 
 
-to_plot_r = df_to_plot[['calving_rate_k_measures_value',
-                        'calving_rate_k_itslive_value',
-                        'calving_rate_k_racmo_value',
+to_plot_r = df_to_plot[['k_measures_value_calving_rate',
+                        'k_itslive_value_calving_rate',
+                        'k_racmo_value_calving_rate',
                         'area_class']]
 
 to_plot_q = to_plot_q.melt('area_class',
@@ -146,12 +146,13 @@ to_plot_k = to_plot_k.melt('area_class',
 to_plot_r = to_plot_r.melt('area_class',
                            var_name='Method',  value_name='calving_rate')
 
-to_plot_k = to_plot_k.drop(to_plot_k[to_plot_k.k_value > 20].index)
+#to_plot_k = to_plot_k.drop(to_plot_k[to_plot_k.k_value > 20].index)
 to_plot_k = to_plot_k.drop(to_plot_k[to_plot_k.k_value == 0].index)
 
 to_plot_q = to_plot_q.drop(to_plot_q[to_plot_q.calving_flux == 0].index)
 
 to_plot_r = to_plot_r.drop(to_plot_r[to_plot_r.calving_rate == 0].index)
+
 
 color_palette = sns.color_palette("deep")
 
@@ -167,7 +168,7 @@ fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8))
 # ax0.set_yscale("log")
 g0 = sns.catplot(x="area_class", y="k_value", hue='Method',
                  data=to_plot_k, kind='box', ax=ax0, legend=True,
-                 palette=color_array)
+                 palette=color_array, showfliers=False)
 ax0.set_xticklabels(labels=['0-5', '5-15', '15-50', '50-1300'])
 ax0.set_xlabel('Area class [$km^2$]')
 ax0.set_ylabel('$k$ [$yr^{-1}$]')

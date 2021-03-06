@@ -23,7 +23,6 @@ old_config = ConfigObj(os.path.join(Old_main_path, 'config.ini'))
 # velocity module
 from k_tools import misc
 
-
 # PARAMS for plots
 rcParams['axes.labelsize'] = 25
 rcParams['xtick.labelsize'] = 25
@@ -138,6 +137,7 @@ no_racmo_data_ids = misc.read_rgi_ids_from_csv(no_racmo_data)
 no_solution = os.path.join(output_racmo, 'glaciers_with_no_solution.csv')
 no_sol_ids = misc.read_rgi_ids_from_csv(no_solution)
 
+ids_with_no_data = ['RGI60-05.10878' 'RGI60-05.10997' 'RGI60-05.10998']
 
 # Calculate study area precentage per error category
 area_prepro = misc.calculate_study_area(prepro_ids,
@@ -148,8 +148,11 @@ area_no_measures = misc.calculate_study_area(no_measures_data_ids,
                                              sub_no_conect)
 area_no_racmo = misc.calculate_study_area(no_racmo_data_ids,
                                           sub_no_conect)
-area_no_solution = misc.calculate_study_area(no_sol_ids,
-                                             sub_no_conect)
+
+area_no_solution_no_data = misc.calculate_study_area(ids_with_no_data,
+                                                     sub_no_conect)
+area_no_solution = misc.calculate_study_area(no_sol_ids, sub_no_conect) - \
+                   area_no_solution_no_data
 
 study_area = sub_no_conect.Area.sum()
 print(study_area)
@@ -170,6 +173,7 @@ k = {'Category': category_two,
 dk = pd.DataFrame(data=k)
 
 print(dk)
+
 
 print(study_area)
 print(rgi_area_total)

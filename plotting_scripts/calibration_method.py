@@ -1,30 +1,18 @@
 import os
 import sys
-import salem
-import xarray as xr
 import numpy as np
-import pyproj
 from configobj import ConfigObj
-import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.offsetbox import AnchoredText
-import matplotlib.gridspec as gridspec
 import seaborn as sns
 import pandas as pd
 import pickle
 from scipy.stats import linregress
-from scipy.optimize import fsolve
-import geopandas as gpd
-from oggm import cfg, utils, workflow, graphics, tasks
-from oggm.workflow import execute_entity_task
-from oggm.core import inversion
-from oggm.shop import its_live
+
 
 MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
 sys.path.append(MAIN_PATH)
 
-from k_tools import utils_velocity as utils_vel
-from k_tools import utils_racmo as utils_racmo
 from k_tools import misc as misc
 
 config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
@@ -38,7 +26,7 @@ rcParams['xtick.labelsize'] = 12
 rcParams['ytick.labelsize'] = 12
 sns.set_context('poster')
 
-output_dir_path = os.path.join(MAIN_PATH, 'output_data/13_Merged_data_test/')
+output_dir_path = os.path.join(MAIN_PATH, 'output_data/13_Merged_data/')
 
 exp_dir_path = os.path.join(MAIN_PATH,
                     'output_data/05_k_exp_for_calibration/RGI60-05.00800.csv')
@@ -57,7 +45,7 @@ df_common = pd.read_csv(os.path.join(output_dir_path,
                         index_col='Unnamed: 0')
 
 exp_k = pd.read_csv(exp_dir_path, index_col='Unnamed: 0')
-exp_k = exp_k.drop_duplicates(subset=('calving_flux'), keep=False)
+exp_k = exp_k.drop_duplicates(subset='calving_flux', keep=False)
 
 print(exp_k.columns)
 
@@ -184,7 +172,7 @@ color_palette_q = sns.color_palette("deep")
 
 # FIGURE 3
 
-fig = plt.figure(figsize=(14, 4), constrained_layout=True)
+fig = plt.figure(figsize=(20, 6), constrained_layout=True)
 
 gs = fig.add_gridspec(1, 3, wspace=0.01, hspace=0.1)
 
@@ -213,8 +201,8 @@ ax0.scatter(Z_upper_bound_m[0], Z_upper_bound_m[1], marker='x', c='brown')
 ax0.set_xlabel('$k$ [yr$^{-1}$]')
 ax0.set_ylabel('Velocity [m yr$^{-1}$]')
 ax0.legend(loc='lower left', bbox_to_anchor= (0.0, 1.01), ncol=1,
-            borderaxespad=0, frameon=False, fontsize=12)
-at = AnchoredText('a', prop=dict(size=15), frameon=True, loc=2)
+            borderaxespad=0, frameon=False, fontsize=18)
+at = AnchoredText('a', prop=dict(size=18), frameon=True, loc=2)
 ax0.add_artist(at)
 
 
@@ -242,9 +230,9 @@ ax1.set_xlabel('$k$ [yr$^{-1}$]')
 ax1.set_ylabel('Velocity [m yr$^{-1}$]')
 
 ax1.legend(loc='lower left', bbox_to_anchor= (0.0, 1.01), ncol=1,
-            borderaxespad=0, frameon=False, fontsize=12)
+            borderaxespad=0, frameon=False, fontsize=18)
 
-at = AnchoredText('b', prop=dict(size=15), frameon=True, loc=2)
+at = AnchoredText('b', prop=dict(size=18), frameon=True, loc=2)
 ax1.add_artist(at)
 
 
@@ -269,8 +257,8 @@ ax2.scatter(Z_upper_bound_r[0], Z_upper_bound_r[1], marker='x', c='brown')
 ax2.set_xlabel('$k$ [yr$^{-1}$]')
 ax2.set_ylabel('$q_{calving}$ [$km^3yr^{-1}$]')
 ax2.legend(loc='lower left', bbox_to_anchor= (0.0, 1.01), ncol=1,
-            borderaxespad=0, frameon=False, fontsize=12)
-at = AnchoredText('c', prop=dict(size=15), frameon=True, loc=2)
+            borderaxespad=0, frameon=False, fontsize=18)
+at = AnchoredText('c', prop=dict(size=18), frameon=True, loc=2)
 ax2.add_artist(at)
 
 # ax0.set_title("MEaSUREs")

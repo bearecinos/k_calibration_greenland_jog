@@ -9,6 +9,7 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.offsetbox import AnchoredText
 import sys
 from configobj import ConfigObj
 # Locals
@@ -76,15 +77,6 @@ df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
 rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
           'Area'] = df_prepro_ic.rgi_area_km2.values
 
-# # Get glaciers that belong to the ice cap.
-# rgidf_ice_cap = rgidf[rgidf['RGIId'].str.match('RGI60-05.10315')]
-# # Get the id's for filter
-# ice_cap_ids = rgidf_ice_cap.RGIId.values
-
-# # Removing the Ice cap
-# keep_indexes = [(i not in ice_cap_ids) for i in rgidf.RGIId]
-# rgidf = rgidf.iloc[keep_indexes]
-
 # Remove Land-terminating
 glac_type = ['0']
 keep_glactype = [(i not in glac_type) for i in rgidf.TermType]
@@ -109,12 +101,12 @@ path_no_solution = os.path.join(output_racmo, 'glaciers_with_no_solution.csv')
 
 no_sol_ids = misc.read_rgi_ids_from_csv(path_no_solution)
 keep_no_solution = [(i in no_sol_ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_no_solution]
+rgidf_no_sol = rgidf.iloc[keep_no_solution]
 
 # Run a single id for testing
-glacier = ['RGI60-05.00119', 'RGI60-05.00151']
+glacier = ['RGI60-05.10315_d11', 'RGI60-05.10315_d14']
 keep_indexes = [(i in glacier) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_indexes]
+rgidf_test = rgidf.iloc[keep_indexes]
 
 # # Remove glaciers that need to be model with gimp
 # df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
@@ -124,22 +116,22 @@ rgidf = rgidf.iloc[keep_indexes]
 #
 # rgidf = rgidf.iloc[keep_indexes_no_gimp]
 #
-# log.info('Starting run for RGI reg: ' + rgi_region)
-# log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
-# log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
+log.info('Starting run for RGI reg: ' + rgi_region)
+log.info('Number of glaciers with no solution: {}'.format(len(rgidf_no_sol)))
+log.info('Number of glaciers Ice cap: {}'.format(len(rgidf_test)))
 
 # Go - initialize working directories
 # -----------------------------------
-gdirs = workflow.init_glacier_directories(rgidf)
+gdirs = workflow.init_glacier_directories(rgidf_no_sol)
 
 workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
                              source='ARCTICDEM')
 
-# gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-# workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
-#                              source='GIMP')
+gdirs_ice_cap = workflow.init_glacier_directories(rgidf_test)
+workflow.execute_entity_task(tasks.define_glacier_region, gdirs_ice_cap,
+                             source='ARCTICDEM')
 #
-# gdirs.extend(gdirs_gimp)
+gdirs.extend(gdirs_ice_cap)
 
 # Calculate the Pre-processing tasks
 task_list = [
@@ -178,27 +170,77 @@ for gdir in gdirs:
     v = ds.obs_icevel_y.where(ds.glacier_mask == 1)
     ws = (u ** 2 + v ** 2) ** 0.5
 
-    f = plt.figure()
+    min_vel = np.min(ws)
+    med_vel = np.median(ws)
+    mean = np.round(np.mean(ws),2)
+    max_vel = np.round(np.max(ws), 2)
+
+    # Quiver only every 3rd grid point
+    us = u[1::3, 1::3]
+    vs = v[1::3, 1::3]
+
+    misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+    shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+    shp = gpd.read_file(shp_path)
+
+    if gdir.rgi_id == 'RGI60-05.10315_d14':
+        loc_pos = 'upper right'
+    else:
+        loc_pos = 'upper left'
+
+    f, (ax1, ax2, ax3) = plt.subplots(figsize=(18, 6), ncols=3, nrows=1,
+                                    gridspec_kw = {'wspace':0.2, 'hspace':0})
     # Show/save figure as desired.
     llkw = {'interval': 1}
-    graphics.plot_catchment_width(gdir, title=gdir.rgi_id, corrected=True,
+
+    graphics.plot_googlemap(gdir, ax=ax1)
+    at = AnchoredText('a', prop=dict(size=16), frameon=True, loc=loc_pos)
+    ax1.add_artist(at)
+
+    graphics.plot_catchment_width(gdir, ax=ax2, title=gdir.rgi_id, corrected=True,
                                   lonlat_contours_kwargs=llkw,
-                                  add_colorbar=False, add_scalebar=False)
+                                  add_colorbar=False, add_scalebar=True)
+    at = AnchoredText('b', prop=dict(size=16), frameon=True, loc=loc_pos)
+    ax2.add_artist(at)
+
+    smap = ds.salem.get_map(countries=False)
+    smap.set_shapefile(gdir.read_shapefile('outlines'))
+    smap.set_shapefile(shp, color='r', linewidth=1.5)
+    smap.set_data(ws)
+    smap.set_lonlat_contours(interval=1)
+    smap.set_cmap('Blues')
+
+    # transform their coordinates to the map reference system and plot the arrows
+    xx, yy = smap.grid.transform(us.x.values, us.y.values, crs=gdir.grid.proj)
+    xx, yy = np.meshgrid(xx, yy)
+    qu = ax3.quiver(xx, yy, us.values, vs.values)
+    qk = ax3.quiverkey(qu, min_vel, med_vel, max_vel, str(max_vel)+'m s$^{-1}$',
+                      labelpos='E', coordinates='axes')
+    smap.visualize(ax=ax3, cbar_title='ITSlive velocity \n [m/yr]',
+                   title=gdir.rgi_id)
+
+    at = AnchoredText('c', prop=dict(size=16), frameon=True, loc=loc_pos)
+    ax3.add_artist(at)
+
     plt.savefig(os.path.join(cfg.PATHS['working_dir'],
                              gdir.rgi_id+'.png'),
                 bbox_inches='tight')
     plt.clf()
     plt.close(f)
 
-    f, ax = plt.subplots(figsize=(9, 9))
-    smap = ds.salem.get_map(countries=False)
-    smap.set_shapefile(gdir.read_shapefile('outlines'))
-    smap.set_data(ws)
-    smap.set_cmap('Blues')
-    smap.plot(ax=ax)
-    smap.append_colorbar(ax=ax)
-    plt.clf()
-    plt.close(f)
+    # f, ax = plt.subplots(figsize=(9, 9))
+    # smap = ds.salem.get_map(countries=False)
+    # smap.set_shapefile(gdir.read_shapefile('outlines'))
+    # smap.set_shapefile(shp, color='r', linewidth=1.5)
+    # smap.set_data(ws)
+    # smap.set_cmap('Blues')
+    # smap.visualize(ax=ax, cbar_title='ITSlive velocity \n [m/yr]', title=gdir.rgi_id)
+    # #smap.append_colorbar(ax=ax)
+    # plt.savefig(os.path.join(cfg.PATHS['working_dir'],
+    #                          gdir.rgi_id + '_velocity.png'),
+    #             bbox_inches='tight')
+    # plt.clf()
+    # plt.close(f)
 
 # Compile output
 df_stats = misc.compile_exp_statistics(gdirs)

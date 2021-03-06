@@ -109,13 +109,13 @@ calibration_results_itslive = os.path.join(MAIN_PATH,
                                            config['linear_fit_to_data'])
 
 path_to_file = os.path.join(calibration_results_itslive,
-                            'velocity_fit_calibration_results_itslive.csv')
+                            'velocity_fit_calibration_results_measures.csv')
 
 dc = pd.read_csv(path_to_file, index_col='RGIId')
 
 for gdir in gdirs:
     sel = dc[dc.index == gdir.rgi_id]
-    k_value = sel.k_for_obs_value.values
+    k_value = sel.k_for_up_bound.values
 
     cfg.PARAMS['continue_on_error'] = False
     cfg.PARAMS['inversion_calving_k'] = float(k_value)

@@ -45,6 +45,9 @@ print(study_area)
 df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
                                         config['ice_cap_prepro']))
 
+area_ice_cap_orig = df_prepro_ic.rgi_area_km2.sum()
+print(area_ice_cap_orig)
+
 df_prepro_ic_vbsl = pd.read_csv(os.path.join(MAIN_PATH,
                                              'output_data/02_Ice_cap_prepo/volume_below_sea_level.csv'),
                                 index_col='Unnamed: 0')
@@ -57,6 +60,15 @@ errors.rename(columns={'RGIId': 'rgi_id'}, inplace=True)
 
 errors_ic = errors[errors['rgi_id'].str.match('RGI60-05.10315')].copy()
 errors_ic_ids = errors_ic.rgi_id.values
+
+print('ice cap errors', errors_ic_ids)
+
+
+
+area_no_measures = 204.752
+area_no_solution = 3748.752
+area_no_racmo = 105.845
+area_no_itslive = 4417.071
 
 exp_list = []
 area = []
@@ -88,7 +100,9 @@ for exp_name in configurations_order:
     volume_bsl = np.append(volume_bsl, sum_exp.vbsl.sum())
     volume_bsl_c = np.append(volume_bsl_c, sum_exp.vbsl_c.sum())
     no_glaciers = np.append(no_glaciers, len(sum_exp))
-#
+
+
+# SORTING THE ICE CAP
 ice_cap_area = []
 ice_cap_no_basins = []
 ice_cap_volume_before_calving = []
@@ -104,7 +118,6 @@ for exp_name in configurations_order:
 
     exp_df = exp_df[exp_df['rgi_id'].str.match('RGI60-05.10315')].copy()
 
-    print(exp_df.rgi_id.values)
 
     df = exp_df[['rgi_id',
                  'rgi_area_km2',
@@ -152,15 +165,15 @@ for exp_name in configurations_order:
                              'vbsl',
                              'vbsl_c']]
 
-    print('Area before exp')
-    print(df_ice_cap.rgi_area_km2.sum())
-
-    print('Area of exp')
-    print(df.rgi_area_km2.sum())
+    # print('Area before exp')
+    # print(df_ice_cap.rgi_area_km2.sum())
+    #
+    # print('Area of exp')
+    # print(df.rgi_area_km2.sum())
 
     df_final = df_ice_cap.append(df)
-    print('Area after exp')
-    print(df_final.rgi_area_km2.sum())
+    # print('Area after exp')
+    # print(df_final.rgi_area_km2.sum())
 
 
     ice_cap_area = np.append(ice_cap_area, df_final.rgi_area_km2.sum())
@@ -181,7 +194,14 @@ for exp_name in configurations_order:
                                      df_final.vbsl_c.sum())
 
     ice_cap_no_basins = np.append(ice_cap_no_basins, len(df_final))
+#
+#
+total_fa = calving_flux + ice_cap_calving_flux
 
+total_fa_gt = total_fa/1.091
+
+print('icap area per exp')
+ice_cap_area
 
 df_calving_total = {'Configuration': exp_list,
                     'Area': area,
@@ -197,9 +217,57 @@ df_calving_total = {'Configuration': exp_list,
                     'Volume bsl before calving': volume_bsl,
                     'Volume bsl after calving': volume_bsl_c,
                     'Volume bsl before calving ice cap': ice_cap_volume_bsl,
-                    'Volume bsl after calving ice cap': ice_cap_volume_bsl_c}
+                    'Volume bsl after calving ice cap': ice_cap_volume_bsl_c,
+                    'Total calving flux': total_fa,
+                    'Total calving flux gt/yr': total_fa_gt}
 
 data_frame = pd.DataFrame(data=df_calving_total)
 
 data_frame.to_csv(os.path.join(output_path +
                                '/total_frontal_ablation_per_method.csv'))
+
+# Print estimates for the paper
+print('----------- For de paper more information ------------------')
+print(exp_list[0:6])
+print('Mean and std Fa for velocity methods',
+      np.round(np.mean(total_fa_gt[0:6]),2),
+      np.round(np.std(total_fa_gt[0:6]),2))
+
+print(exp_list[6:9])
+print('Mean and std Fa for racmo method',
+      np.round(np.mean(total_fa_gt[6:9]), 2),
+      np.round(np.std(total_fa_gt[6:9]), 2))
+
+print(exp_list[0:6])
+print('Mean and std Fa for velocity methods',
+      np.round(np.mean(total_fa[0:6]),2),
+      np.round(np.std(total_fa[0:6]),2))
+
+print(exp_list[6:9])
+print('Mean and std Fa for racmo method',
+      np.round(np.mean(total_fa[6:9]), 2),
+      np.round(np.std(total_fa[6:9]), 2))
+
+print('----- No of glaciers  ------')
+print(exp_list[1])
+print(no_glaciers[1]+ice_cap_no_basins[1])
+print(exp_list[3])
+print(no_glaciers[3]+ice_cap_no_basins[3])
+print(exp_list[6])
+print(no_glaciers[6]+ice_cap_no_basins[6])
+
+
+print('----- area coverage per data set ------')
+print(exp_list[1])
+print(area[1]+ice_cap_area[1]-area_no_itslive)
+print(exp_list[3])
+print(area[3]+ice_cap_area[3]-area_no_measures)
+print(exp_list[6])
+print(area[6]+ice_cap_area[6]-area_no_racmo)
+print('----- % study area coverage per data set ------')
+print(exp_list[1])
+print((area[1]+ice_cap_area[1]-area_no_itslive-area_no_solution)*100/study_area)
+print(exp_list[3])
+print((area[3]+ice_cap_area[3]-area_no_measures-area_no_solution)*100/study_area)
+print(exp_list[6])
+print((area[6]+ice_cap_area[6]-area_no_racmo-area_no_solution)*100/study_area)

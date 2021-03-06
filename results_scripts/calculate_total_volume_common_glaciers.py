@@ -3,6 +3,7 @@ import os
 import sys
 import pandas as pd
 import geopandas as gpd
+import numpy as np
 import salem
 from configobj import ConfigObj
 
@@ -44,6 +45,9 @@ print(study_area)
 # Read common glaciers data frame and select the data that we need
 df_common = pd.read_csv(os.path.join(output_path,
                                      'common_final_results.csv'))
+
+df_common = df_common.loc[df_common.calving_inversion_k_k_racmo_value > 0]
+df_common = df_common.loc[df_common.calving_inversion_k_k_measures_value < 20]
 
 print('Originally we have this many glaciers '
       'in common among the different methods')
@@ -405,12 +409,113 @@ Ice_cap_total_volume_bsl = [fari_ice_cap_vbsl,
                             k_racmo_upbound_ice_cap_vbsl]
 
 
+total_vol = np.array(Glaciers_total_volume) + np.array(Ice_cap_total_volume)
+
+total_vol_bsl = np.array(Glaciers_total_volume_bsl) + np.array(Ice_cap_total_volume_bsl)
+
+tol_vol_SLE = []
+tol_vol_BSL_SLE = []
+
+for vol, vol_bsl in zip(total_vol, total_vol_bsl):
+    tol_vol_SLE.append(
+        np.round(abs(misc.calculate_sea_level_equivalent(vol)),2))
+    tol_vol_BSL_SLE.append(
+        np.round(abs(misc.calculate_sea_level_equivalent(vol_bsl)), 2))
+
+volume_percentage_diff = []
+
+vol_no_calving = total_vol[2]
+
+print('Volume percentage differences between no calving and configurations')
+percentage = []
+for volss in total_vol[3:12]:
+    percentage.append(misc.calculate_volume_percentage(vol_no_calving,volss))
+print(configurations_order[3:12])
+print(percentage)
+
+print(configurations_order[9:12])
+vol_racmo = total_vol[9:12]
+print(configurations_order[3:6])
+vol_measures = total_vol[3:6]
+
+percentage_racmo_m = []
+for vol_one, vol_two in zip(vol_racmo, vol_measures):
+    percentage_racmo_m.append(misc.calculate_volume_percentage(vol_one,
+                                                               vol_two))
+print(percentage_racmo_m)
+
+print(configurations_order[9:12])
+print(configurations_order[6:9])
+vol_itslive = total_vol[6:9]
+
+percentage_racmo_i = []
+for vol_one, vol_two in zip(vol_racmo, vol_itslive):
+    percentage_racmo_i.append(misc.calculate_volume_percentage(vol_one,
+                                                               vol_two))
+print(percentage_racmo_i)
+
+print('Volume percentage differences between consensus and configurations')
+consensus = total_vol[0]
+huss = total_vol[1]
+percentage_con = []
+percentage_huss = []
+for volss in total_vol[3:12]:
+    percentage_con.append(misc.calculate_volume_percentage(consensus, volss))
+    percentage_huss.append(misc.calculate_volume_percentage(huss, volss))
+print(configurations_order[3:12])
+print(percentage_con)
+print(percentage_huss)
+print(np.mean(percentage_con[0:6]))
+print(np.mean(percentage_huss[0:6]))
+
+print('-------vol ---------')
+print(configurations_order[3:9])
+print('Mean and std volume for velocity methods',
+      np.round(np.mean(tol_vol_SLE[3:9]),2),
+      np.round(np.std(tol_vol_SLE[3:9]),2))
+
+print(configurations_order[9:12])
+print('Mean and std volume for racmo method',
+      np.round(np.mean(tol_vol_SLE[9:12]), 2),
+      np.round(np.std(tol_vol_SLE[9:12]), 2))
+
+print(configurations_order[3:9])
+print('Mean and std volume bsl for velocity methods',
+      np.round(np.mean(tol_vol_BSL_SLE[3:9]),2),
+      np.round(np.std(tol_vol_BSL_SLE[3:9]),2))
+
+print(configurations_order[9:12])
+print('Mean and std volume bsl for racmo method',
+      np.round(np.mean(tol_vol_BSL_SLE[9:12]), 2),
+      np.round(np.std(tol_vol_BSL_SLE[9:12]), 2))
+
+print(configurations_order[3:9])
+print('Mean and std volume - volume bsl for velocity methods',
+      np.round(np.mean(np.array(tol_vol_SLE[3:9])-np.array(tol_vol_BSL_SLE[3:9])),2),
+      np.round(np.std(np.array(tol_vol_SLE[3:9])-np.array(tol_vol_BSL_SLE[3:9])),2))
+
+print(configurations_order[9:12])
+print('Mean and std volume - volume bsl for racmo method',
+      np.round(np.mean(np.array(tol_vol_SLE[9:12])-np.array(tol_vol_BSL_SLE[9:12])), 2),
+      np.round(np.std(np.array(tol_vol_SLE[9:12])-np.array(tol_vol_BSL_SLE[9:12])), 2))
+
+value = np.round(np.mean(np.array(tol_vol_SLE[3:9])-np.array(tol_vol_BSL_SLE[3:9])),2)
+non_calving = tol_vol_SLE[2] - tol_vol_BSL_SLE[2]
+print('Percentage of change')
+print(misc.calculate_volume_percentage(non_calving, value))
+
+
+
 df_volumes_total = {'Configuration': configurations_order,
                     'Area': Areas,
                     'Volume_all_glaciers': Glaciers_total_volume,
                     'Volume_ice_cap': Ice_cap_total_volume,
                     'Volume_all_glaciers_bsl': Glaciers_total_volume_bsl,
-                    'Volume_ice_cap_bsl': Ice_cap_total_volume_bsl}
+                    'Volume_ice_cap_bsl': Ice_cap_total_volume_bsl,
+                    'Total_vol': total_vol,
+                    'Total_vol_sle': tol_vol_SLE,
+                    'Total_vol_bsl': total_vol_bsl,
+                    'Total_vol_bsl_sle': tol_vol_BSL_SLE}
 
 data_frame = pd.DataFrame(data=df_volumes_total)
 

@@ -80,31 +80,6 @@ df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
 rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
           'Area'] = df_prepro_ic.rgi_area_km2.values
 
-# Run only for Lake Terminating and Marine Terminating
-glac_type = ['0']
-keep_glactype = [(i not in glac_type) for i in rgidf.TermType]
-rgidf = rgidf.iloc[keep_glactype]
-
-# Run only glaciers that have a week connection or are
-# not connected to the ice-sheet
-connection = [2]
-keep_connection = [(i not in connection) for i in rgidf.Connect]
-rgidf = rgidf.iloc[keep_connection]
-
-# Exclude glaciers with prepro erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
-
-# Remove glaciers that need to be model with gimp
-df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
-keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
-keep_gimp = [(i in df_gimp.RGIId.values) for i in rgidf.RGIId]
-rgidf_gimp = rgidf.iloc[keep_gimp]
-
-rgidf = rgidf.iloc[keep_indexes_no_gimp]
-
 # Repeat experiment tuned for problematic glaciers.
 dp = pd.read_csv(os.path.join(MAIN_PATH, config['problematic_glaciers']))
 ids_p = dp.RGIId.values
@@ -114,7 +89,6 @@ rgidf = rgidf.iloc[keep_problematic]
 
 log.info('Starting run for RGI reg: ' + rgi_region)
 log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
-log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 
 # Go - initialize working directories
 # -----------------------------------

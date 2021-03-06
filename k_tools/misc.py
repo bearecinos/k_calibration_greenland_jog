@@ -475,6 +475,8 @@ def get_core_data(df):
     df_core['volume_before_calving_km3'] = df_core.loc[:,
                                        'volume_before_calving'].copy()*1e-9
 
+    df_core.index.name = 'rgi_id'
+
     return df_core
 
 
@@ -533,6 +535,7 @@ def summarize_exp(df, exp_name=''):
                      'calving_law_flux',
                      'calving_water_level',
                      'calving_inversion_k',
+                     'calving_front_thick',
                      'volume_bsl']]
 
     df_results.columns = exp_name + df_results.columns

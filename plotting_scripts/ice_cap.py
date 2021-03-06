@@ -10,6 +10,7 @@ from matplotlib import rcParams
 import matplotlib.gridspec as gridspec
 from configobj import ConfigObj
 from oggm import workflow, cfg, utils
+from oggm.shop import its_live
 
 rcParams['axes.labelsize'] = 18
 rcParams['xtick.labelsize'] = 18
@@ -32,6 +33,15 @@ plot_path = os.path.join(MAIN_PATH, 'plots/')
 # RGI file
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
+
+# Get glaciers that belong to the ice cap.
+ice_cap = rgidf[rgidf['RGIId'].str.match('RGI60-05.10315')]
+# Get the id's for filter
+ice_cap_ids = ice_cap.RGIId.values
+
+# keeping only the Ice cap
+keep_indexes = [(i in ice_cap_ids) for i in rgidf.RGIId]
+rgidf_ice_cap = rgidf.iloc[keep_indexes]
 
 # The mask and geo reference data
 ds_geo = xr.open_dataset(os.path.join(Old_main_path,
@@ -61,15 +71,12 @@ gdir = gdirs[0]
 # Selecting a zoom portion of the topo data fitting the ice cap
 ds_geo_sel = ds_geo.salem.subset(grid=gdir.grid, margin=2)
 
-# Reading ice cap outline and assinging the rgi grid
-shape_cap = salem.read_shapefile_to_grid(ice_cap, gdir.grid)
-
 # Processing vel data
 dvel = utils_vel.open_vel_raster(vel_file)
 
 dve_sel = dvel.salem.subset(grid=gdir.grid, margin=2)
 
-sub_mar = shape_cap.loc[shape_cap['TermType'] == '1']
+sub_mar = rgidf_ice_cap.loc[rgidf_ice_cap['TermType'] == '1']
 
 # Plotting
 fig2 = plt.figure(figsize=(18, 6), constrained_layout=False)
@@ -89,7 +96,7 @@ ax0.add_artist(at)
 
 ax1 = plt.subplot(spec[1])
 sm = ds_geo_sel.salem.get_map(countries=False)
-sm.set_shapefile(shape_cap, color='black')
+sm.set_shapefile(rgidf_ice_cap, color='black')
 sm.set_data(ds_geo_sel.Topography)
 sm.set_cmap('topo')
 sm.set_scale_bar()
@@ -100,7 +107,7 @@ ax1.add_artist(at)
 
 ax2 = plt.subplot(spec[2])
 sm = dve_sel.salem.get_map(countries=False)
-sm.set_shapefile(shape_cap, color='black')
+sm.set_shapefile(rgidf_ice_cap, color='black')
 sm.set_shapefile(sub_mar, color='r')
 sm.set_data(dve_sel.data)
 sm.set_cmap('viridis')
