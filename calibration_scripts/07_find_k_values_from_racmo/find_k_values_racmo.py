@@ -17,7 +17,7 @@ sys.path.append(MAIN_PATH)
 config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 
 # RACMO module
-from k_tools import utils_racmo as utils_racmo
+from k_tools import utils_racmo as utilsr
 
 # Read output from k experiment
 WORKING_DIR = os.path.join(MAIN_PATH, config['sensitivity_exp'], '*.csv')
@@ -31,12 +31,6 @@ output_path = os.path.join(MAIN_PATH, config['racmo_calibration_results'])
 # Read the RGI to store Area for statistics
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
 
-# Exclude glaciers with prepro-erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
-
 rgidf = rgidf.sort_values('RGIId', ascending=True)
 
 # Read Areas for the ice-cap computed in OGGM during
@@ -48,6 +42,12 @@ df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
 # Assign an area to the ice cap from OGGM to avoid errors
 rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
           'Area'] = df_prepro_ic.rgi_area_km2.values
+
+# Exclude glaciers with prepro-erros
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
 
 if not os.path.exists(output_path):
     os.makedirs(output_path)
@@ -65,7 +65,7 @@ output = defaultdict(list)
 
 for j, f in enumerate(filenames):
     glacier = pd.read_csv(f)
-    glacier = glacier.drop_duplicates(subset=('calving_flux'), keep=False)
+    glacier = glacier.drop_duplicates(subset='calving_flux', keep=False)
     base = os.path.basename(f)
     rgi_id = os.path.splitext(base)[0]
     if glacier.empty:
@@ -86,8 +86,8 @@ for j, f in enumerate(filenames):
             # Perform the first step calibration and save the output as a
             # pickle file per glacier
             data_racmo = d_racmo.iloc[index]
-            output[rgi_id] = utils_racmo.find_k_values_within_racmo_range(glacier,
-                                                                          data_racmo)
+            output[rgi_id] = utilsr.find_k_values_within_racmo_range(glacier,
+                                                                     data_racmo)
             fp = os.path.join(output_path, rgi_id + '.pkl')
             with open(fp, 'wb') as f:
                 pickle.dump(output[rgi_id], f, protocol=-1)

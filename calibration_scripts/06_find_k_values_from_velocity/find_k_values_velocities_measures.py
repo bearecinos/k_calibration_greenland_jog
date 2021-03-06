@@ -32,12 +32,6 @@ output_path = os.path.join(MAIN_PATH,
 # Read the RGI to store Area for statistics
 rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
 
-# Exclude glaciers with prepro-erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
-
 rgidf = rgidf.sort_values('RGIId', ascending=True)
 
 # Read Areas for the ice-cap computed in OGGM during
@@ -49,6 +43,12 @@ df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
 # Assign an area to the ice cap from OGGM to avoid errors
 rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
           'Area'] = df_prepro_ic.rgi_area_km2.values
+
+# Exclude glaciers with prepro-erros
+de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+ids = de.RGIId.values
+keep_errors = [(i not in ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_errors]
 
 if not os.path.exists(output_path):
     os.makedirs(output_path)
