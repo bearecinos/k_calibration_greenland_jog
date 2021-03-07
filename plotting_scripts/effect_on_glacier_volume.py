@@ -28,29 +28,77 @@ rcParams['xtick.labelsize'] = 12
 rcParams['ytick.labelsize'] = 12
 sns.set_context('poster')
 
-output_dir_path = os.path.join(MAIN_PATH, 'output_data/13_Merged_data_test/')
+output_dir_path = os.path.join(MAIN_PATH, 'output_data/13_Merged_data/')
 
 df = pd.read_csv(os.path.join(output_dir_path,
                                     'total_volume_vbsl_for_final_plot.csv'))
 
 configuration = df['Configuration'].values
-print(configuration)
-ice_cap_vol_bsl_exp = df['Volume_ice_cap_bsl'].values
-vol_bsl_exp = df['Volume_all_glaciers_bsl'].values
-vol_exp = df['Volume_all_glaciers'].values
 
-ice_cap_vol_exp = df['Volume_ice_cap'].values
+filter_indices = [0,1,2,4,7,10]
+
+print(configuration[filter_indices])
+ice_cap_vol_bsl_exp = df['Volume_ice_cap_bsl'].values[filter_indices]
+vol_bsl_exp = df['Volume_all_glaciers_bsl'].values[filter_indices]
+vol_exp = df['Volume_all_glaciers'].values[filter_indices]
+
+ice_cap_vol_exp = df['Volume_ice_cap'].values[filter_indices]
 print('volumes')
 print(ice_cap_vol_exp+vol_exp)
 
-# RGI file
-rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
-rgidf.crs = salem.wgs84.srs
+print(configuration[8])
+print(configuration[11])
+
+error_bars_measures = df['Volume_all_glaciers'].values[5] - df['Volume_all_glaciers'].values[3]
+error_bars_itslive = df['Volume_all_glaciers'].values[8] - df['Volume_all_glaciers'].values[6]
+error_bars_racmo  = df['Volume_all_glaciers'].values[11] - df['Volume_all_glaciers'].values[9]
+
+error_bars_measures_ic = df['Volume_ice_cap'].values[5] - df['Volume_ice_cap'].values[3]
+error_bars_itslive_ic = df['Volume_ice_cap'].values[8] - df['Volume_ice_cap'].values[6]
+error_bars_racmo_ic  = df['Volume_ice_cap'].values[11] - df['Volume_ice_cap'].values[9]
+
+error_bars_vbsl_measures = df['Volume_all_glaciers_bsl'].values[5] - df['Volume_all_glaciers_bsl'].values[3]
+error_bars_vbsl_itslive = df['Volume_all_glaciers_bsl'].values[8] - df['Volume_all_glaciers_bsl'].values[6]
+error_bars_vbsl_racmo  = df['Volume_all_glaciers_bsl'].values[11] - df['Volume_all_glaciers_bsl'].values[9]
+
+error_bars_vbsl_measures_ic = df['Volume_ice_cap_bsl'].values[5] - df['Volume_ice_cap_bsl'].values[3]
+error_bars_vbsl_itslive_ic = df['Volume_ice_cap_bsl'].values[8] - df['Volume_ice_cap_bsl'].values[6]
+error_bars_vbsl_racmo_ic  = df['Volume_ice_cap_bsl'].values[11] - df['Volume_ice_cap_bsl'].values[9]
+
+error_bars = np.array([0,
+                      0,
+                      0,
+                      error_bars_measures,
+                      error_bars_itslive,
+                      error_bars_racmo])
+
+error_bars_ic = np.array([0,
+                          0,
+                          0,
+                          error_bars_measures_ic,
+                          error_bars_itslive_ic,
+                          error_bars_racmo_ic])
+
+
+error_bars_vsl = np.array([0,
+                           0,
+                           0,
+                           error_bars_vbsl_measures,
+                           error_bars_vbsl_itslive,
+                           error_bars_vbsl_racmo])
+
+error_bars_ic_vsl = np.array([0,
+                              0,
+                              0,
+                              error_bars_vbsl_measures_ic,
+                              error_bars_vbsl_itslive_ic,
+                              error_bars_vbsl_racmo_ic])
+
+print(error_bars)
+print(error_bars_ic)
 
 # Calculate study area
-study_area = misc.get_study_area(rgidf, MAIN_PATH, config['ice_cap_prepro'])
-print('Our target study area')
-print(study_area)
+study_area = 32202.540
 
 print('Percentage of study area')
 area = (df['Area']*100) / study_area
@@ -68,25 +116,30 @@ color_palette = sns.color_palette("deep")
 #                color_palette[3], color_palette[4],
 #                color_palette[2], color_palette[1],
 color_array = [color_palette[3], color_palette[4], color_palette[5],
-               color_palette[0], color_palette[0], color_palette[0],
-               color_palette[2], color_palette[2], color_palette[2],
-               color_palette[1], color_palette[1], color_palette[1]]
+               color_palette[0], color_palette[2], color_palette[1]]
 
 # Example data
-y_pos = [0,0.5,1,2,2.5,3,4,4.5,5,6,6.5,7]
+y_pos = [0,0.5,1,2,2.5,3]
 
 
 p0 = ax1.barh(y_pos, (ice_cap_vol_bsl_exp+vol_bsl_exp)*-1,
               align='center', color=sns.xkcd_rgb["grey"],
-              height=0.5, edgecolor="white", hatch="/")
+              height=0.5, edgecolor="white", hatch="/",
+              xerr=error_bars_ic_vsl*-1,
+              ecolor=sns.xkcd_rgb["dark grey"])
 
 p1 = ax1.barh(y_pos, vol_bsl_exp*-1, align='center',
-              color=sns.xkcd_rgb["grey"], height=0.5, edgecolor="white")
+              color=sns.xkcd_rgb["grey"], height=0.5, edgecolor="white",
+              xerr=error_bars_vsl*-1,
+              ecolor=sns.xkcd_rgb["dark grey"])
 
 p2 = ax1.barh(y_pos, vol_exp+ice_cap_vol_exp, align='center',
-              color=color_array, height=0.5, hatch="/")
+              color=color_array, height=0.5, hatch="/", xerr=error_bars_ic,
+              ecolor=sns.xkcd_rgb["dark grey"])
 
-p3 = ax1.barh(y_pos, vol_exp, align='center', color=color_array, height=0.5)
+p3 = ax1.barh(y_pos, vol_exp, align='center', color=color_array, height=0.5,
+              xerr=error_bars,
+              ecolor=sns.xkcd_rgb["dark grey"])
 
 ax1.set_yticks(y_pos)
 ax1.set_yticklabels([])
@@ -110,7 +163,7 @@ print(sle)
 ax2.set_xticklabels(sle, fontsize=20)
 ax2.set_xlabel('Volume [mm SLE]', fontsize=18)
 
-plt.legend((p3[0], p3[1], p3[2], p3[3], p3[6], p3[9]),
+plt.legend((p3[0], p3[1], p3[2], p3[3], p3[4], p3[5]),
            ('Farinotti et al. (2019)',
             'Huss and Farinotti. (2012)',
             'Without $q_{calving}$',

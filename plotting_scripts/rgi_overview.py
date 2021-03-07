@@ -73,6 +73,20 @@ index = rgidf.index.values
 # Get the glaciers classified by Terminus type
 sub_mar = rgidf[rgidf['TermType'].isin(['1'])]
 sub_lan = rgidf[rgidf['TermType'].isin(['0'])]
+print('Total land terminating glaciers')
+print(len(sub_lan))
+
+# Separate the ice cap to read it later and add it to marine
+# Get glaciers that belong to the ice cap.
+ice_cap_land_terminating = sub_lan[sub_lan['RGIId'].str.match('RGI60-05.10315')]
+ice_cap_land_area = ice_cap_land_terminating['Area'].sum()
+
+# Get the id's for filter
+ice_cap_ids = ice_cap_land_terminating.RGIId.values
+print('Number of land terminating minus the ice cap')
+print(len(sub_lan) - len(ice_cap_ids))
+print('Number of land terminating ice cap basins')
+print(len(ice_cap_ids))
 
 # Classify Marine-terminating by connectivity
 sub_no_conect = sub_mar[sub_mar['Connect'].isin([0, 1])]
@@ -94,9 +108,9 @@ category = ['Land-terminating',
             'Tidewater strongly connected',
             'Tidewater weakly connected']
 
-area = [area_per_reg.Area[0],
+area = [area_per_reg.Area[0] - ice_cap_land_area,
         area_mar.Area[2],
-        area_mar.Area[0] + area_mar.Area[1]]
+        area_mar.Area[0] + area_mar.Area[1] + ice_cap_land_area]
 
 area_percent = area / rgidf.Area.astype(np.float).sum() * 100
 
@@ -107,23 +121,34 @@ ds = pd.DataFrame(data=d)
 
 print(ds)
 
+print('Total STUDY AREA')
+study_area = sub_no_conect.Area.sum() + ice_cap_land_area
+print(study_area)
+
+# Lets combine the RGIdf's of sub no connect with ice cap land terminating
+rgidf_study_area = pd.concat([sub_no_conect, ice_cap_land_terminating],
+                             ignore_index=True)
 
 # Analyse errors and data gaps
-prepro_ids = misc.read_rgi_ids_from_csv(os.path.join(MAIN_PATH,
-                                                     config['prepro_err']))
+prepro_errors = pd.read_csv(os.path.join(MAIN_PATH,
+                                      config['prepro_err']))
+area_prepro = prepro_errors.Area.sum()
+
 
 output_itslive = os.path.join(MAIN_PATH,
                               config['vel_calibration_results_itslive'])
 no_itslive_data = os.path.join(output_itslive,
                                'glaciers_with_no_vel_data.csv')
-no_itslive_data_ids = misc.read_rgi_ids_from_csv(no_itslive_data)
+no_itslive_data_df = pd.read_csv(no_itslive_data)
+area_no_itslive = no_itslive_data_df.Area.sum()
+
 
 output_measures = os.path.join(MAIN_PATH,
                                config['vel_calibration_results_measures'])
 no_measures_data = os.path.join(output_measures,
                                 'glaciers_with_no_vel_data.csv')
-
-no_measures_data_ids = misc.read_rgi_ids_from_csv(no_measures_data)
+no_measures_data_df = pd.read_csv(no_measures_data)
+area_no_measures = no_measures_data_df.Area.sum()
 
 # Reads racmo calibration output
 output_racmo = os.path.join(MAIN_PATH,
@@ -131,31 +156,17 @@ output_racmo = os.path.join(MAIN_PATH,
 no_racmo_data = os.path.join(output_racmo,
                              'glaciers_with_no_racmo_data.csv')
 
-no_racmo_data_ids = misc.read_rgi_ids_from_csv(no_racmo_data)
+no_racmo_data_df = pd.read_csv(no_racmo_data)
+area_no_racmo = no_racmo_data_df.Area.sum()
 
 
 no_solution = os.path.join(output_racmo, 'glaciers_with_no_solution.csv')
-no_sol_ids = misc.read_rgi_ids_from_csv(no_solution)
+no_sol_df = pd.read_csv(no_solution)
+area_no_solution = no_sol_df.Area.sum()
 
 ids_with_no_data = ['RGI60-05.10878' 'RGI60-05.10997' 'RGI60-05.10998']
-
-# Calculate study area precentage per error category
-area_prepro = misc.calculate_study_area(prepro_ids,
-                                        sub_no_conect)
-area_no_itslive = misc.calculate_study_area(no_itslive_data_ids,
-                                            sub_no_conect)
-area_no_measures = misc.calculate_study_area(no_measures_data_ids,
-                                             sub_no_conect)
-area_no_racmo = misc.calculate_study_area(no_racmo_data_ids,
-                                          sub_no_conect)
-
 area_no_solution_no_data = misc.calculate_study_area(ids_with_no_data,
-                                                     sub_no_conect)
-area_no_solution = misc.calculate_study_area(no_sol_ids, sub_no_conect) - \
-                   area_no_solution_no_data
-
-study_area = sub_no_conect.Area.sum()
-print(study_area)
+                                                     rgidf_study_area)
 
 category_two = ['OGGM pre-processing errors',
                 'Glaciers with no ITSLive velocity data',
@@ -164,7 +175,7 @@ category_two = ['OGGM pre-processing errors',
                 'Glaciers with no calving solution']
 
 areas_two = [area_prepro, area_no_itslive, area_no_measures, area_no_racmo,
-             area_no_solution]
+             area_no_solution-area_no_solution_no_data]
 area_percent_two = areas_two / study_area * 100
 
 k = {'Category': category_two,
@@ -174,14 +185,15 @@ dk = pd.DataFrame(data=k)
 
 print(dk)
 
-
+print('Total study Area')
 print(study_area)
+print('RGI total area')
 print(rgi_area_total)
 
 world_area = 705738.793
 study_area_percentage = study_area / world_area * 100
+print('Percentage of world area')
 print(study_area_percentage)
-print(study_area)
 
 rgi_area_from_glims = 89717.066
 print(rgi_area_from_glims-rgi_area_total)
@@ -207,7 +219,7 @@ smap.set_shapefile(sub_lan, facecolor=sns.xkcd_rgb["grey"],
 
 # Marine-terminating
 # i: Not Connected
-smap.set_shapefile(sub_no_conect, facecolor=sns.xkcd_rgb["medium blue"],
+smap.set_shapefile(rgidf_study_area, facecolor=sns.xkcd_rgb["medium blue"],
                    label='Tidewater weakly connected', linewidth=3.0,
                    edgecolor=sns.xkcd_rgb["medium blue"])
 
@@ -323,5 +335,5 @@ ax2.add_artist(lgd)
 
 plt.tight_layout()
 # plt.show()
-plt.savefig(os.path.join(plot_path, 'rgi_overview_test.png'),
+plt.savefig(os.path.join(plot_path, 'rgi_overview.png'),
             bbox_inches='tight', pad_inches=0.25)
