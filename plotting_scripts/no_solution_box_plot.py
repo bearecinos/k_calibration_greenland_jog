@@ -150,7 +150,7 @@ fig, ax0 = plt.subplots(1, 1, figsize=(8, 8))
 
 # ax0.set_yscale("log")
 g0 = sns.boxplot(data=to_plot_vel, palette=color_array,
-                 ax=ax0, showfliers=True)
+                 ax=ax0, showfliers=False)
 ax0.set_xticklabels(labels=['MEaSUREs v1.0', 'ITSlive'])
 ax0.set_ylabel('Surface velocity [m.$yr^{-1}$]')
 
