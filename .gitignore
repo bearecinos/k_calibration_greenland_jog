@@ -1,12 +1,7 @@
 cluster_scripts/01_Greenland_prepo_newoggm
 input_data
 output_data
-output_data_marco
-output_data_bkp
-plots_bkp
 plots
-back_up_scripts
-dev-notebooks
 .idea
 k_tools/__pycache__
 *.pyd
