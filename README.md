@@ -1,4 +1,4 @@
-# OGGM k calibration
+# OGGM k calibration for Greenland TW peripheral glaciers
 
 This repository contains the scripts used to calibrate a frontal ablation parameterization in [OGGM](https://docs.oggm.org/en/latest/) applied to Greenland peripheral calving glaciers and produce the results of the paper submitted to Journal of Glaciology. *Recinos, B. et al (in review)*
 
