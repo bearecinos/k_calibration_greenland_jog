@@ -10,7 +10,7 @@ import pickle
 from collections import defaultdict
 import geopandas as gpd
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
+MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
 sys.path.append(MAIN_PATH)
 
 config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))

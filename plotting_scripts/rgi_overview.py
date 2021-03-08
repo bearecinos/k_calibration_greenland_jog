@@ -14,7 +14,7 @@ import matplotlib.gridspec as gridspec
 import sys
 
 Old_main_path = os.path.expanduser('~/k_calibration_greenland/')
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
+MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
 sys.path.append(MAIN_PATH)
 
 config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))

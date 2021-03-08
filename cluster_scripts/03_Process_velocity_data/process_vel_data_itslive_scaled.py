@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 # Time
 start = time.time()
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
+MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
 sys.path.append(MAIN_PATH)
 
 config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))

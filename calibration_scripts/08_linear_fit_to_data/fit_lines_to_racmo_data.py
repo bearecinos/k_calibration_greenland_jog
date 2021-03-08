@@ -12,7 +12,7 @@ import pickle
 from scipy.stats import linregress
 import pandas as pd
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
+MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
 sys.path.append(MAIN_PATH)
 
 config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))

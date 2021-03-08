@@ -18,7 +18,7 @@ rcParams['ytick.labelsize'] = 18
 
 
 Old_main_path = os.path.expanduser('~/k_calibration_greenland/')
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
+MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
 sys.path.append(MAIN_PATH)
 
 from k_tools import utils_velocity as utils_vel

@@ -41,7 +41,7 @@ echo "Start copying..."
 # Once a slurm job is done, slurm will clean up the /work directory on that node from any leftovers from that user.
 # So copy any result data you need from there back to your home dir!
 # $SLURM_SUBMIT_DIR points to the directory from where the job was initially commited.
-OUTDIR="$HOME/k_calibration_greenland_new/output_data/04_Process_RACMO_data/1995_2015/"
+OUTDIR="$HOME/k_calibration_greenland_jog/output_data/04_Process_RACMO_data/1995_2015/"
 mkdir -p "$OUTDIR"
 
 # Copy any neccesary result data.

@@ -5,7 +5,7 @@ import pandas as pd
 from configobj import ConfigObj
 from functools import reduce
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
+MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
 sys.path.append(MAIN_PATH)
 
 from k_tools import misc

@@ -18,7 +18,7 @@ from oggm.core import inversion
 from oggm.shop import its_live
 
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_new/')
+MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
 sys.path.append(MAIN_PATH)
 
 from k_tools import utils_velocity as utils_vel

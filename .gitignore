@@ -7,3 +7,4 @@ k_tools/__pycache__
 *.pyd
 *.pyc
 *.pyo
+config.ini
