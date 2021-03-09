@@ -33,10 +33,6 @@ configurations_order = ['farinotti',
 
 print(configurations_order)
 
-# RGI file
-rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
-rgidf.crs = salem.wgs84.srs
-
 # Calculate study area
 study_area = 32202.540
 print('Our target study area')
