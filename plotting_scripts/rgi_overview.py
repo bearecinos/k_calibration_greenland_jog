@@ -201,6 +201,7 @@ print(rgi_area_from_glims-rgi_area_total)
 # drgi = gpd.read_file(rgi_original_path)
 # drgi_original_area = drgi['Area'].sum()
 # print(drgi_original_area/world_area*100)
+
 ##############################################################################
 fig = plt.figure(figsize=(14, 8), constrained_layout=False)
 spec = gridspec.GridSpec(1, 3, width_ratios=[2.5, 1.5, 1.5])

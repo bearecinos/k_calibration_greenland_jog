@@ -130,8 +130,8 @@ result_ic = pd.concat([df_prepro_ic_to_save,
                       axis=1)
 result_ic.index.name = 'rgi_id'
 
-# result_ic.to_csv(os.path.join(output_path,
-#                               'ice_cap_volume_all_methos_plus_consensus.csv'))
+result_ic.to_csv(os.path.join(output_path,
+                              'ice_cap_volume_all_methos_plus_consensus.csv'))
 
 print('Total of the ice cap modelled')
 print(len(result_ic))

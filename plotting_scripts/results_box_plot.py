@@ -66,15 +66,15 @@ df_to_plot = df_common[[
 
 df_to_plot.loc[:,
 'k_itslive_value_calving_rate'] = df_to_plot['k_itslive_value_calving_flux']*1e9/\
-                                    df_to_plot['k_itslive_value_calving_front_thick']*df_to_plot['calving_front_width_x']
+                                  (df_to_plot['k_itslive_value_calving_front_thick']*df_to_plot['calving_front_width_x'])
 
 df_to_plot.loc[:,
 'k_measures_value_calving_rate'] = df_to_plot['k_measures_value_calving_flux']*1e9/\
-                                   df_to_plot['k_measures_value_calving_front_thick']*df_to_plot['calving_front_width_x']
+                                   (df_to_plot['k_measures_value_calving_front_thick']*df_to_plot['calving_front_width_x'])
 
 df_to_plot.loc[:,
 'k_racmo_value_calving_rate'] = df_to_plot['k_racmo_value_calving_flux']*1e9/\
-                                df_to_plot['k_racmo_value_calving_front_thick']*df_to_plot['calving_front_width_x']
+                                (df_to_plot['k_racmo_value_calving_front_thick']*df_to_plot['calving_front_width_x'])
 
 # Classify the glaciers by area classes
 df_to_plot["area_class"] = np.digitize(df_to_plot["rgi_area_km2_x"],

@@ -111,3 +111,5 @@ print(area_racmo)
 print('Percentage of study area with a negative SMB')
 area_racmo_neg = (df_racmo_no_negative.rgi_area_km2.sum()*100) / study_area
 print(area_racmo_neg)
+
+print(area_racmo-area_racmo_neg)

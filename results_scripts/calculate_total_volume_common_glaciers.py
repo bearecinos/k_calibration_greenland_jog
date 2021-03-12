@@ -120,16 +120,15 @@ Ice_cap_total_volume_bsl = [df_vol_ice_cap.vol_bsl_itmix_km3.sum(),
                             df_vol_ice_cap.k_racmo_upbound_volume_bsl.sum()]
 
 
-total_vol = np.array(Glaciers_total_volume) #+ np.array(Ice_cap_total_volume)
-print('Total volume')
-print(configurations_order)
-print(total_vol)
+total_vol = np.array(Glaciers_total_volume) + np.array(Ice_cap_total_volume)
+# print('Total volume')
+# print(configurations_order)
+# print(total_vol)
 
-
-total_vol_bsl = np.array(Glaciers_total_volume_bsl) #+ np.array(Ice_cap_total_volume_bsl)
-print('Total volume bsl')
-print(configurations_order)
-print(total_vol_bsl)
+total_vol_bsl = np.array(Glaciers_total_volume_bsl) + np.array(Ice_cap_total_volume_bsl)
+# print('Total volume bsl')
+# print(configurations_order)
+# print(total_vol_bsl)
 
 tol_SL_contribution = []
 for vol, vol_bsl in zip(total_vol, total_vol_bsl):
@@ -142,71 +141,85 @@ tol_vol_BSL_SLE = []
 
 for vol, vol_bsl in zip(total_vol, total_vol_bsl):
     tol_vol_SLE.append(
-        np.round(abs(misc.calculate_sea_level_equivalent(vol)),2))
+        np.round(abs(misc.compute_slr(vol)),2))
     tol_vol_BSL_SLE.append(
-        np.round(abs(misc.calculate_sea_level_equivalent(vol_bsl)), 2))
+        np.round(abs(misc.compute_slr(vol_bsl)), 2))
 
 print('Total volume sle')
 print(tol_vol_SLE)
 
-volume_percentage_diff = []
-
+print('Total volume sle BELOW SL')
+print(tol_vol_BSL_SLE)
+#
+# volume_percentage_diff = []
+#
 vol_no_calving = total_vol[2]
-
-print('Volume percentage differences between no calving and configurations')
+#
+print('---Volume percentage differences between no calving and configurations---')
 percentage = []
 for volss in total_vol[3:12]:
     percentage.append(misc.calculate_volume_percentage(vol_no_calving,volss))
 print(configurations_order[3:12])
 print(percentage)
-
-print(configurations_order[9:12])
-vol_racmo = total_vol[9:12]
-print(configurations_order[3:6])
-vol_measures = total_vol[3:6]
 #
-percentage_racmo_m = []
-for vol_one, vol_two in zip(vol_racmo, vol_measures):
-    percentage_racmo_m.append(misc.calculate_volume_percentage(vol_one,
-                                                               vol_two))
-print('Volume percentage differences between racmo and measures')
-print(percentage_racmo_m)
+# print(configurations_order[9:12])
+# vol_racmo = total_vol[9:12]
+# print(configurations_order[3:6])
+# vol_measures = total_vol[3:6]
+# #
+# percentage_racmo_m = []
+# for vol_one, vol_two in zip(vol_racmo, vol_measures):
+#     percentage_racmo_m.append(misc.calculate_volume_percentage(vol_one,
+#                                                                vol_two))
+# print('Volume percentage differences between racmo and measures')
+# print(percentage_racmo_m)
+# #
+# print(configurations_order[9:12])
+# print(configurations_order[6:9])
+# vol_itslive = total_vol[6:9]
 #
-print(configurations_order[9:12])
-print(configurations_order[6:9])
-vol_itslive = total_vol[6:9]
-
-percentage_racmo_i = []
-for vol_one, vol_two in zip(vol_racmo, vol_itslive):
-    percentage_racmo_i.append(misc.calculate_volume_percentage(vol_one,
-                                                               vol_two))
-print('Volume percentage differences between racmo and itslive')
-print(percentage_racmo_i)
-
-print('Volume percentage differences between consensus and configurations')
-consensus = total_vol[0]
-huss = total_vol[1]
-percentage_con = []
-percentage_huss = []
-for volss in total_vol[3:12]:
-    percentage_con.append(misc.calculate_volume_percentage(consensus, volss))
-    percentage_huss.append(misc.calculate_volume_percentage(huss, volss))
-print(configurations_order[3:12])
-print(percentage_con)
-print(percentage_huss)
-print(np.mean(percentage_con[0:6]))
-print(np.mean(percentage_huss[0:6]))
+# percentage_racmo_i = []
+# for vol_one, vol_two in zip(vol_racmo, vol_itslive):
+#     percentage_racmo_i.append(misc.calculate_volume_percentage(vol_one,
+#                                                                vol_two))
+# print('Volume percentage differences between racmo and itslive')
+# print(percentage_racmo_i)
+#
+# print('****Volume percentage differences between consensus and configurations*****')
+# consensus = total_vol[0]
+# huss = total_vol[1]
+# percentage_con = []
+# percentage_huss = []
+# for volss in total_vol[3:12]:
+#     percentage_con.append(misc.calculate_volume_percentage(consensus, volss))
+#     percentage_huss.append(misc.calculate_volume_percentage(huss, volss))
+# print(configurations_order[3:12])
+# print(percentage_con)
+# print(percentage_huss)
+#
+# print(np.mean(percentage_con[0:6]))
+# print(np.mean(percentage_huss[0:6]))
 
 print('-------vol ---------')
 print(configurations_order[3:9])
-print('Mean and std volume for velocity methods',
+print('Mean and std volume SLContribution for velocity methods',
       np.round(np.mean(tol_SL_contribution[3:9]),2),
       np.round(np.std(tol_SL_contribution[3:9]),2))
 
 print(configurations_order[9:12])
-print('Mean and std volume for racmo method',
+print('Mean and std volume SLContribution for racmo method',
       np.round(np.mean(tol_SL_contribution[9:12]), 2),
       np.round(np.std(tol_SL_contribution[9:12]), 2))
+
+print(configurations_order[3:9])
+print('Mean and std volume SLE for velocity methods',
+      np.round(np.mean(tol_vol_SLE[3:9]),2),
+      np.round(np.std(tol_vol_SLE[3:9]),2))
+
+print(configurations_order[9:12])
+print('Mean and std volume SLE for racmo method',
+      np.round(np.mean(tol_vol_SLE[9:12]), 2),
+      np.round(np.std(tol_vol_SLE[9:12]), 2))
 
 print(configurations_order[3:9])
 print('Mean and std volume bsl for velocity methods',
@@ -218,15 +231,15 @@ print('Mean and std volume bsl for racmo method',
       np.round(np.mean(tol_vol_BSL_SLE[9:12]), 2),
       np.round(np.std(tol_vol_BSL_SLE[9:12]), 2))
 
-print(configurations_order[3:9])
-print('Mean and std volume - volume bsl for velocity methods',
-      np.round(np.mean(np.array(tol_vol_SLE[3:9])-np.array(tol_vol_BSL_SLE[3:9])),2),
-      np.round(np.std(np.array(tol_vol_SLE[3:9])-np.array(tol_vol_BSL_SLE[3:9])),2))
+# print(configurations_order[3:9])
+# print('Mean and std volume - volume bsl for velocity methods',
+#       np.round(np.mean(np.array(tol_vol_SLE[3:9])-np.array(tol_vol_BSL_SLE[3:9])),2),
+#       np.round(np.std(np.array(tol_vol_SLE[3:9])-np.array(tol_vol_BSL_SLE[3:9])),2))
 
-print(configurations_order[9:12])
-print('Mean and std volume - volume bsl for racmo method',
-      np.round(np.mean(np.array(tol_vol_SLE[9:12])-np.array(tol_vol_BSL_SLE[9:12])), 2),
-      np.round(np.std(np.array(tol_vol_SLE[9:12])-np.array(tol_vol_BSL_SLE[9:12])), 2))
+# print(configurations_order[9:12])
+# print('Mean and std volume - volume bsl for racmo method',
+#       np.round(np.mean(np.array(tol_vol_SLE[9:12])-np.array(tol_vol_BSL_SLE[9:12])), 2),
+#       np.round(np.std(np.array(tol_vol_SLE[9:12])-np.array(tol_vol_BSL_SLE[9:12])), 2))
 
 value = np.round(np.mean(np.array(tol_vol_SLE[3:9])-np.array(tol_vol_BSL_SLE[3:9])),2)
 non_calving = tol_vol_SLE[2] - tol_vol_BSL_SLE[2]
@@ -246,6 +259,6 @@ df_volumes_total = {'Configuration': configurations_order,
 
 data_frame = pd.DataFrame(data=df_volumes_total)
 
-exit()
+
 data_frame.to_csv(os.path.join(output_path +
                                    '/total_volume_vbsl_for_final_plot.csv'))

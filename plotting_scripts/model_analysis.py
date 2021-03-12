@@ -43,12 +43,12 @@ df_measures = pd.read_csv(os.path.join(output_dir_path,
                                        'glaciers_measures.csv'))
 z_M = np.arange(0, len(df_measures), 1)
 # keep only glaciers that calve
-df_measures = df_measures[df_measures.k_measures_value_calving_flux > 0]
+# df_measures = df_measures[df_measures.k_measures_value_calving_flux > 0]
 
 df_itslive = pd.read_csv(os.path.join(output_dir_path,
                                       'glaciers_itslive.csv'))
 z_I = np.arange(0, len(df_itslive), 1)
-df_itslive = df_itslive[df_itslive.k_itslive_value_calving_flux > 0]
+# df_itslive = df_itslive[df_itslive.k_itslive_value_calving_flux > 0]
 
 
 df_measures_racmo = pd.read_csv(os.path.join(output_dir_path,
@@ -57,7 +57,7 @@ df_measures_racmo = pd.read_csv(os.path.join(output_dir_path,
 df_measures_racmo = df_measures_racmo[df_measures_racmo.k_racmo_value_calving_inversion_k > 0]
 z_MR = np.arange(0, len(df_measures_racmo), 1)
 
-df_measures_racmo  = df_measures_racmo[df_measures_racmo.k_racmo_value_calving_flux > 0]
+# df_measures_racmo  = df_measures_racmo[df_measures_racmo.k_racmo_value_calving_flux > 0]
 
 df_itslive_racmo = pd.read_csv(os.path.join(output_dir_path,
                                          'common_glaciers_itslive_racmo.csv'))
@@ -65,7 +65,7 @@ df_itslive_racmo = pd.read_csv(os.path.join(output_dir_path,
 df_itslive_racmo = df_itslive_racmo[df_itslive_racmo.k_racmo_value_calving_inversion_k > 0]
 z_IR = np.arange(0, len(df_itslive_racmo), 1)
 
-df_itslive_racmo  = df_itslive_racmo[df_itslive_racmo.k_racmo_value_calving_flux > 0]
+# df_itslive_racmo  = df_itslive_racmo[df_itslive_racmo.k_racmo_value_calving_flux > 0]
 
 # Getting statistics for MEASURES vs OGGM results with k calibrated with MEASURES
 area_coverage_M = df_measures.rgi_area_km2.sum() / study_area * 100
@@ -207,5 +207,5 @@ ax3.add_artist(test_IR)
 # plt.show()
 #
 plt.tight_layout()
-plt.savefig(os.path.join(plot_path, 'model_analysis_without_non_calving.png'),
+plt.savefig(os.path.join(plot_path, 'model_analysis.png'),
                  bbox_inches='tight')

@@ -157,7 +157,7 @@ array = ax1.get_xticks()
 #Get the other axis on sea level equivalent
 sle = []
 for value in array:
-    sle.append(np.round(abs(misc.calculate_sea_level_equivalent(value)),2))
+    sle.append(np.round(abs(misc.compute_slr(value)),2))
 print(sle)
 
 ax2.set_xticklabels(sle, fontsize=20)

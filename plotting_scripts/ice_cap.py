@@ -120,4 +120,4 @@ ax2.add_artist(at)
 plt.tight_layout()
 # plt.show()
 
-plt.savefig(os.path.join(plot_path, 'ice_cap.pdf'), bbox_inches='tight')
+plt.savefig(os.path.join(plot_path, 'ice_cap.png'), bbox_inches='tight')

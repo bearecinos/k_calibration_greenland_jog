@@ -30,7 +30,7 @@ plot_path = os.path.join(MAIN_PATH, 'plots/')
 output_dir_path = os.path.join(MAIN_PATH, 'output_data/13_Merged_data/')
 
 df_common = pd.read_csv(os.path.join(output_dir_path,
-                                     'common_final_results.csv'))
+                                     'common_glaciers_all_methods.csv'))
 
 area_cover_b = df_common.rgi_area_km2_x.sum()
 
