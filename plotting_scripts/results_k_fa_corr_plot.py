@@ -333,8 +333,7 @@ ax0.set_xlabel('$k_{RACMO}$ [yr$^{-1}$]')
 ax0.set_ylabel('$k_{MEaSUREs}$ [yr$^{-1}$]')
 
 at = AnchoredText('a', prop=dict(size=18), frameon=True, loc=2)
-test0 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_MvR, ".2f")) +
-                    '\np-value = ' + str(format(p_pearson_k_MvR, ".3E")),
+test0 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_MvR, ".2f")),
                     prop=dict(size=18), frameon=True, loc=1)
 test0.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
 ax0.add_artist(at)
@@ -356,8 +355,7 @@ ax1.set_ylim(-0.2, 4)
 ax1.set_xticks([0, 1, 2, 3, 4])
 ax1.set_xlabel('$k_{RACMO}$ [yr$^{-1}$]')
 ax1.set_ylabel('$k_{ITSlive}$ [yr$^{-1}$]')
-test1 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_IvR, ".2f")) +
-                    '\np-value = ' + str(format(p_pearson_k_IvR, ".3E")),
+test1 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_IvR, ".2f")),
                     prop=dict(size=18), frameon=True, loc=1)
 test1.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
 at = AnchoredText('b', prop=dict(size=18), frameon=True, loc=2)
@@ -382,8 +380,7 @@ ax2.set_xticks([0, 1, 2, 3, 4])
 ax2.set_xlabel('$k_{ITSlive}$ [yr$^{-1}$]')
 ax2.set_ylabel('$k_{MEaSUREs}$ [yr$^{-1}$]')
 
-test2 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_IvM, ".2f")) +
-                    '\np-value = ' + str(format(p_pearson_k_IvM, ".3E")),
+test2 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_k_IvM, ".2f")),
                     prop=dict(size=18), frameon=True, loc=1)
 test2.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
 at = AnchoredText('c', prop=dict(size=18), frameon=True, loc=2)
@@ -407,8 +404,7 @@ ax3.set_ylim(-0.1, 1.0)
 ax3.set_xticks([0, 0.25, 0.5, 0.75, 1])
 ax3.set_xlabel('$q_{calving-RACMO}$ [$km^3$yr$^{-1}$]')
 ax3.set_ylabel('$q_{calving-MEaSUREs}$ [$km^3$yr$^{-1}$]')
-test3 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_q_MvR, ".2f")) +
-                    '\np-value = ' + str(format(p_pearson_q_MvR, ".3E")),
+test3 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_q_MvR, ".2f")),
                     prop=dict(size=18), frameon=True, loc=1)
 test3.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
 at = AnchoredText('d', prop=dict(size=18), frameon=True, loc=2)
@@ -433,8 +429,7 @@ ax4.set_ylim(-0.1, 1.0)
 ax4.set_xticks([0, 0.25, 0.5, 0.75, 1])
 ax4.set_xlabel('$q_{calving-RACMO}$ [$km^3$yr$^{-1}$]')
 ax4.set_ylabel('$q_{calving-ITSlive}$ [$km^3$yr$^{-1}$]')
-test4 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_q_IvR, ".2f")) +
-                    '\np-value = ' + str(format(p_pearson_q_IvR, ".3E")),
+test4 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_q_IvR, ".2f")),
                     prop=dict(size=18), frameon=True, loc=1)
 test4.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
 at = AnchoredText('e', prop=dict(size=18), frameon=True, loc=2)
@@ -458,8 +453,7 @@ ax5.set_ylim(-0.1, 1.0)
 ax5.set_xticks([0, 0.25, 0.5, 0.75, 1])
 ax5.set_xlabel('$q_{calving-ITSlive}$ [$km^3$yr$^{-1}$]')
 ax5.set_ylabel('$q_{calving-MEaSUREs}$ [$km^3$yr$^{-1}$]')
-test5 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_q_IvM, ".2f")) +
-                    '\np-value = ' + str(format(p_pearson_q_IvM, ".3E")),
+test5 = AnchoredText('$r_{s}$ = '+ str(format(r_pearson_q_IvM, ".2f")),
                     prop=dict(size=18), frameon=True, loc=1)
 test5.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
 at = AnchoredText('f', prop=dict(size=18), frameon=True, loc=2)

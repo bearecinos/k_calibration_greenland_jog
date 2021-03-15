@@ -31,9 +31,9 @@ config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 plot_path = os.path.join(MAIN_PATH, 'plots/')
 
 # PARAMS for plots
-rcParams['axes.labelsize'] = 10
-rcParams['xtick.labelsize'] = 10
-rcParams['ytick.labelsize'] = 10
+rcParams['axes.labelsize'] = 5
+rcParams['xtick.labelsize'] = 5
+rcParams['ytick.labelsize'] = 5
 sns.set_context('poster')
 
 # The mask and geo reference data
@@ -164,12 +164,13 @@ smb_avg_sel = ds_smb_two_sel.SMB_rec.mean(dim='time', skipna=True).compute()
 print('Done calculating')
 
 # Now plotting
-fig1 = plt.figure(figsize=(16, 15), constrained_layout=True)
+f = 1.2
+fig1 = plt.figure(figsize=(16*f, 13*f), constrained_layout=True)
 
 widths = [2, 2, 2]
 heights = [2, 4, 2]
 
-spec = gridspec.GridSpec(3, 3, wspace=1.0, hspace=0.05, width_ratios=widths,
+spec = gridspec.GridSpec(3, 3, wspace=0.9, hspace=0.05, width_ratios=widths,
                          height_ratios=heights)
 
 # plot a
@@ -204,8 +205,8 @@ sm.set_vmin(0)
 sm.set_vmax(200)
 x_conect, y_conect = sm.grid.transform(gdir.cenlon, gdir.cenlat)
 ax3.scatter(x_conect, y_conect, s=80, marker="o", color='red')
-ax3.text(x_conect, y_conect, s=gdir.rgi_id, color=sns.xkcd_rgb["white"],
-         weight='black', fontsize=12)
+# ax3.text(x_conect, y_conect, s=gdir.rgi_id, color=sns.xkcd_rgb["white"],
+#          weight='black', fontsize=12)
 sm.visualize(ax=ax3, cbar_title='MEaSUREs velocity \n [m/yr]')
 at = AnchoredText('d', prop=dict(size=18), frameon=True, loc='upper left')
 ax3.add_artist(at)
@@ -219,9 +220,9 @@ sm.set_vmin(0)
 sm.set_vmax(200)
 x_conect, y_conect = sm.grid.transform(gdir.cenlon, gdir.cenlat)
 ax4.scatter(x_conect, y_conect, s=80, marker="o", color='red')
-ax4.text(x_conect, y_conect, s=gdir.rgi_id,
-         color=sns.xkcd_rgb["white"],
-         weight='black', fontsize=12)
+# ax4.text(x_conect, y_conect, s=gdir.rgi_id,
+#          color=sns.xkcd_rgb["white"],
+#          weight='black', fontsize=12)
 sm.visualize(ax=ax4, cbar_title='ITSlive velocity \n [m/yr]')
 at = AnchoredText('e', prop=dict(size=18), frameon=True, loc='upper left')
 ax4.add_artist(at)
@@ -233,9 +234,9 @@ sm.set_data(avg)
 sm.set_cmap('RdBu')
 x_conect, y_conect = sm.grid.transform(gdir.cenlon, gdir.cenlat)
 ax5.scatter(x_conect, y_conect, s=80, marker="o", color='red')
-ax5.text(x_conect, y_conect, s=gdir.rgi_id,
-         color=sns.xkcd_rgb["black"],
-         weight='black', fontsize=10)
+# ax5.text(x_conect, y_conect, s=gdir.rgi_id,
+#          color=sns.xkcd_rgb["black"],
+#          weight='black', fontsize=10)
 # sm.set_scale_bar(location=(0.78, 0.04))
 sm.set_vmin(-200)
 sm.set_vmax(200)
@@ -284,4 +285,4 @@ ax8.add_artist(at)
 # plt.show()
 plt.savefig(os.path.join(cfg.PATHS['working_dir'],
                          'data_input_plot_all.png'),
-            bbox_inches='tight')
+            bbox_inches='tight', dpi=150)

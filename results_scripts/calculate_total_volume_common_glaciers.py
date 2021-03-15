@@ -185,20 +185,20 @@ print(percentage)
 # print('Volume percentage differences between racmo and itslive')
 # print(percentage_racmo_i)
 #
-# print('****Volume percentage differences between consensus and configurations*****')
-# consensus = total_vol[0]
-# huss = total_vol[1]
-# percentage_con = []
-# percentage_huss = []
-# for volss in total_vol[3:12]:
-#     percentage_con.append(misc.calculate_volume_percentage(consensus, volss))
-#     percentage_huss.append(misc.calculate_volume_percentage(huss, volss))
-# print(configurations_order[3:12])
-# print(percentage_con)
-# print(percentage_huss)
-#
-# print(np.mean(percentage_con[0:6]))
-# print(np.mean(percentage_huss[0:6]))
+print('****Volume percentage differences between consensus and configurations*****')
+consensus = total_vol[0]
+huss = total_vol[1]
+percentage_con = []
+percentage_huss = []
+for volss in total_vol[3:12]:
+    percentage_con.append(misc.calculate_volume_percentage(consensus, volss))
+    percentage_huss.append(misc.calculate_volume_percentage(huss, volss))
+print(configurations_order[3:12])
+print(percentage_con)
+print(percentage_huss)
+
+print(np.mean(percentage_con[0:6]))
+print(np.mean(percentage_huss[0:6]))
 
 print('-------vol ---------')
 print(configurations_order[3:9])
@@ -260,5 +260,5 @@ df_volumes_total = {'Configuration': configurations_order,
 data_frame = pd.DataFrame(data=df_volumes_total)
 
 
-data_frame.to_csv(os.path.join(output_path +
-                                   '/total_volume_vbsl_for_final_plot.csv'))
+# data_frame.to_csv(os.path.join(output_path +
+#                                    '/total_volume_vbsl_for_final_plot.csv'))

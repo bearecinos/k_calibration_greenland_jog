@@ -119,7 +119,7 @@ color_array = [color_palette[3], color_palette[4], color_palette[5],
                color_palette[0], color_palette[2], color_palette[1]]
 
 # Example data
-y_pos = [0,0.5,1,2,2.5,3]
+y_pos = [0,0.5,1,1.5,2,2.5]
 
 
 p0 = ax1.barh(y_pos, (ice_cap_vol_bsl_exp+vol_bsl_exp)*-1,
