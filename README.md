@@ -19,8 +19,5 @@ The contents of the repository are the following:
 
 *Citation for this repository:*
 
-[![DOI](https://zenodo.org/badge/320879611.svg)](https://zenodo.org/badge/latestdoi/320879611)
-
-
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4757137.svg)](https://doi.org/10.5281/zenodo.4757137)
 
