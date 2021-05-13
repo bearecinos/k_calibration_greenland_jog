@@ -43,12 +43,12 @@ df_measures = pd.read_csv(os.path.join(output_dir_path,
                                        'glaciers_measures.csv'))
 z_M = np.arange(0, len(df_measures), 1)
 # keep only glaciers that calve
-# df_measures = df_measures[df_measures.k_measures_value_calving_flux > 0]
+df_measures = df_measures[df_measures.k_measures_value_calving_flux > 0]
 
 df_itslive = pd.read_csv(os.path.join(output_dir_path,
                                       'glaciers_itslive.csv'))
 z_I = np.arange(0, len(df_itslive), 1)
-# df_itslive = df_itslive[df_itslive.k_itslive_value_calving_flux > 0]
+df_itslive = df_itslive[df_itslive.k_itslive_value_calving_flux > 0]
 
 
 df_measures_racmo = pd.read_csv(os.path.join(output_dir_path,
@@ -57,7 +57,7 @@ df_measures_racmo = pd.read_csv(os.path.join(output_dir_path,
 df_measures_racmo = df_measures_racmo[df_measures_racmo.k_racmo_value_calving_inversion_k > 0]
 z_MR = np.arange(0, len(df_measures_racmo), 1)
 
-# df_measures_racmo  = df_measures_racmo[df_measures_racmo.k_racmo_value_calving_flux > 0]
+df_measures_racmo  = df_measures_racmo[df_measures_racmo.k_racmo_value_calving_flux > 0]
 
 df_itslive_racmo = pd.read_csv(os.path.join(output_dir_path,
                                          'common_glaciers_itslive_racmo.csv'))
@@ -65,7 +65,7 @@ df_itslive_racmo = pd.read_csv(os.path.join(output_dir_path,
 df_itslive_racmo = df_itslive_racmo[df_itslive_racmo.k_racmo_value_calving_inversion_k > 0]
 z_IR = np.arange(0, len(df_itslive_racmo), 1)
 
-# df_itslive_racmo  = df_itslive_racmo[df_itslive_racmo.k_racmo_value_calving_flux > 0]
+df_itslive_racmo  = df_itslive_racmo[df_itslive_racmo.k_racmo_value_calving_flux > 0]
 
 # Getting statistics for MEASURES vs OGGM results with k calibrated with MEASURES
 area_coverage_M = df_measures.rgi_area_km2.sum() / study_area * 100
@@ -134,8 +134,8 @@ ax0.set_xlim(-20, 400)
 ax0.set_ylim(-20, 400)
 ax0.plot(z_M, zline_M, color=color_palette_k[0])
 ax0.plot(z_M, wline_M, color='grey')
-ax0.set_xlabel('MEaSUREs velocities \n [m $yr^{-1}$]')
-ax0.set_ylabel('OGGM velocities \n [m $yr^{-1}$]')
+ax0.set_xlabel('MEaSUREs velocities \n [m yr$^{-1}$]')
+ax0.set_ylabel('OGGM velocities \n [m yr$^{-1}$]')
 ax0.set_title('OGGM calibrated with MEaSUREs vs MEaSUREs', size=16)
 at = AnchoredText('a', prop=dict(size=14), frameon=True, loc=2)
 ax0.add_artist(at)
@@ -156,8 +156,8 @@ ax1.plot(z_MR, zline_MR, color=color_palette_k[1])
 ax1.plot(z_MR, wline_MR, color='grey')
 ax1.set_xlim(-20, 400)
 ax1.set_ylim(-20, 400)
-ax1.set_xlabel('MEaSUREs velocities \n [m $yr^{-1}$]')
-ax1.set_ylabel('OGGM velocities \n [m $yr^{-1}$]')
+ax1.set_xlabel('MEaSUREs velocities \n [m yr$^{-1}$]')
+ax1.set_ylabel('OGGM velocities \n [m yr$^{-1}$]')
 ax1.set_title('OGGM calibrated with RACMO vs MEaSUREs', size=16)
 at = AnchoredText('b', prop=dict(size=14), frameon=True, loc=2)
 ax1.add_artist(at)
@@ -177,8 +177,8 @@ ax2.plot(z_I, zline_I, color=color_palette_k[2])
 ax2.plot(z_I, wline_I, color='grey')
 ax2.set_xlim(-20, 400)
 ax2.set_ylim(-20, 400)
-ax2.set_xlabel('ITSlive velocities \n [m $yr^{-1}$]')
-ax2.set_ylabel('OGGM velocities \n [m $yr^{-1}$]')
+ax2.set_xlabel('ITSlive velocities \n [m yr$^{-1}$]')
+ax2.set_ylabel('OGGM velocities \n [m yr$^{-1}$]')
 ax2.set_title('OGGM calibrated with ITSlive vs ITSlive', size=16)
 at = AnchoredText('c', prop=dict(size=14), frameon=True, loc=2)
 ax2.add_artist(at)
@@ -198,8 +198,8 @@ ax3.plot(z_IR, zline_IR, color=color_palette_k[1])
 ax3.plot(z_IR, wline_IR, color='grey')
 ax3.set_xlim(-20, 400)
 ax3.set_ylim(-20, 400)
-ax3.set_xlabel('ITSlive velocities \n [m $yr^{-1}$]')
-ax3.set_ylabel('OGGM velocities \n [m $yr^{-1}$]')
+ax3.set_xlabel('ITSlive velocities \n [m yr$^{-1}$]')
+ax3.set_ylabel('OGGM velocities \n [m yr$^{-1}$]')
 ax3.set_title('OGGM calibrated with RACMO vs ITSlive', size=16)
 at = AnchoredText('d', prop=dict(size=14), frameon=True, loc=2)
 ax3.add_artist(at)
@@ -207,5 +207,5 @@ ax3.add_artist(test_IR)
 # plt.show()
 #
 plt.tight_layout()
-plt.savefig(os.path.join(plot_path, 'model_analysis.png'),
+plt.savefig(os.path.join(plot_path, 'model_analysis_without_non_calving.png'),
                  bbox_inches='tight')

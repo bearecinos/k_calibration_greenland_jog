@@ -579,9 +579,9 @@ def calculate_statistics(obs, model, area_coverage, z):
                         '\n intercept = ' + str(format(intercept, ".2f")) +
                         '\n r$^2$ = ' + str(format(r_value, ".2f")) +
                         '\n RMSD = ' + str(format(RMSD, ".2f")) +
-                        ' m$yr^{-1}$' +
+                        ' m yr$^{-1}$' +
                         '\n Bias = ' + str(format(mean_dev, ".2f")) +
-                        ' m$yr^{-1}$',
+                        ' m yr$^{-1}$',
                         prop=dict(size=14), frameon=True, loc=1)
 
     zline = slope * z + intercept

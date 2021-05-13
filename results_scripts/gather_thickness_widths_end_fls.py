@@ -26,6 +26,8 @@ for configuration in config_paths.config_path:
     full_config_paths.append(os.path.join(MAIN_PATH, exp_dir_path,
                                           configuration + '/'))
 
+print(full_config_paths)
+
 # Make output dir
 marcos_data = os.path.join(MAIN_PATH, 'output_data_marco')
 if not os.path.exists(marcos_data):
@@ -47,7 +49,6 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
     RGI_FILE = os.path.join(MAIN_PATH, config['RGI_FILE'])
     rgidf = gpd.read_file(RGI_FILE)
     rgidf.crs = salem.wgs84.srs
-
 
     # Select only Marine-terminating
     glac_type = ['0']
@@ -103,11 +104,26 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
 
         # Get inversion output
         inv_c = gdir.read_pickle('inversion_output')[-1]
+        surface = gdir.read_pickle('inversion_flowlines')[-1].surface_h
+        diags = gdir.get_diagnostics()
+        water_depth = diags['calving_front_water_depth']
+        free_board = diags['calving_front_free_board']
+        calving_flux = diags['calving_flux']
+        depths = np.zeros(len(inv_c['thick'][-5:]))
+        board = np.zeros(len(inv_c['thick'][-5:]))
+        flux = np.zeros(len(inv_c['thick'][-5:]))
+        depths[-1:] = water_depth
+        board[-1:] = free_board
+        flux[-1:] = calving_flux
 
         d = {'thick_end_fls': inv_c['thick'][-5:],
              'width_end_fls': inv_c['width'][-5:],
              'is_rectangular': inv_c['is_rectangular'][-5:],
-             'slope': inv_c['slope_angle'][-5:]}
+             'slope': inv_c['slope_angle'][-5:],
+             'elevation [m]': surface[-5:],
+             'calving_front_water_depth': depths,
+             'calving_front_free_board': board,
+             'calving_flux': flux}
 
         data_frame = pd.DataFrame(data=d)
 

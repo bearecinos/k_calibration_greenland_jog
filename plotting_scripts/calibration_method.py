@@ -41,7 +41,7 @@ racmo_result_path = os.path.join(MAIN_PATH,
         'output_data/07_calibration_racmo_results/RGI60-05.00800.pkl')
 
 df_common = pd.read_csv(os.path.join(output_dir_path,
-                                     'common_final_results.csv'),
+                                     'common_glaciers_all_methods.csv'),
                         index_col='Unnamed: 0')
 
 exp_k = pd.read_csv(exp_dir_path, index_col='Unnamed: 0')
@@ -240,9 +240,9 @@ ax2 = fig.add_subplot(gs[0, 2])
 k_values_r_a = np.insert(k_values_r, -1, Z_upper_bound_r[0], axis=0)
 
 ax2.plot(k_values_r, calving_fluxes, 'o', color=color_palette_q[1],
-         label='OGGM $q_{calving}$', alpha=0.6)
+         label='OGGM $q_{\mathrm{calving}}$', alpha=0.6)
 ax2.plot(k_values_r_a, intercept_obs_r + slope_obs_r*k_values_r_a, '--', color='black', linewidth=3.0,
-    label='RACMO derived $q_{calving}$')
+    label='RACMO derived $q_{\mathrm{calving}}$')
 ax2.plot(k_values_r_a, intercept_lwl_r + slope_lwl_r*k_values_r_a, '-', color='grey', linewidth=3.0)
 ax2.plot(k_values_r_a, intercept_upl_r + slope_upl_r*k_values_r_a, '-', color='grey', linewidth=3.0)
 ax2.plot(k_values_r_a, intercept_c + slope_c*k_values_r_a, color='purple', linewidth=3.0,
@@ -255,7 +255,7 @@ ax2.scatter(Z_value_r[0], Z_value_r[1], marker='x', c='orange')
 ax2.scatter(Z_lower_bound_r[0], Z_lower_bound_r[1], marker='x', c='red')
 ax2.scatter(Z_upper_bound_r[0], Z_upper_bound_r[1], marker='x', c='brown')
 ax2.set_xlabel('$k$ [yr$^{-1}$]')
-ax2.set_ylabel('$q_{calving}$ [$km^3yr^{-1}$]')
+ax2.set_ylabel('$q_{\mathrm{calving}}$ [$\mathrm{km}^3\mathrm{yr}^{-1}$]')
 ax2.legend(loc='lower left', bbox_to_anchor= (0.0, 1.01), ncol=1,
             borderaxespad=0, frameon=False, fontsize=18)
 at = AnchoredText('c', prop=dict(size=18), frameon=True, loc=2)
@@ -267,4 +267,4 @@ ax2.add_artist(at)
 plt.tight_layout()
 
 plt.savefig(os.path.join(plot_path, 'calibration_method.png'),
-             bbox_inches='tight')
+             bbox_inches='tight', dpi=150)

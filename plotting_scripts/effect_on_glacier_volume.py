@@ -166,10 +166,10 @@ ax2.set_xlabel('Volume [mm SLE]', fontsize=18)
 plt.legend((p3[0], p3[1], p3[2], p3[3], p3[4], p3[5]),
            ('Farinotti et al. (2019)',
             'Huss and Farinotti. (2012)',
-            'Without $q_{calving}$',
-            'With $q_{calving}$ - MEaSUREs',
-            'With $q_{calving}$ - ITSlive',
-            'With $q_{calving}$ - RACMO'),
+            'Without $q_{\mathrm{calving}}$',
+            'With $q_{\mathrm{calving-MEaSUREs}}$',
+            'With $q_{\mathrm{calving-ITSlive}}$',
+            'With $q_{\mathrm{calving-RACMO}}$'),
             frameon=True, bbox_to_anchor=(0.8, -0.2), ncol=2)
             #bbox_to_anchor=(1.1, -0.15), ncol=5, fontsize=15)
 

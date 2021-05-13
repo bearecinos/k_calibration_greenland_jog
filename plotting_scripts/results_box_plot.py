@@ -124,17 +124,17 @@ g0 = sns.catplot(x="area_class", y="k_value", hue='Method',
                  data=to_plot_k, kind='box', ax=ax0, legend=True,
                  palette=color_array, showfliers=False)
 ax0.set_xticklabels(labels=['0-5', '5-15', '15-50', '50-1300'])
-ax0.set_xlabel('Area class [$km^2$]')
-ax0.set_ylabel('$k$ [$yr^{-1}$]')
+ax0.set_xlabel('Area class [km$^2$]')
+ax0.set_ylabel('$k$ [yr$^{-1}$]')
 at = AnchoredText('a', prop=dict(size=22), frameon=True, loc='upper left')
 ax0.add_artist(at)
 
 # replace labels
 ax0.get_legend().remove()
 handles, labels = ax0.get_legend_handles_labels()
-ax0.legend(handles, ['$k_{MEaSUREs}$',
-                     '$k_{ITSlive}$',
-                     '$k_{RACMO}$'], loc='upper right', fontsize=19)
+ax0.legend(handles, ['$k_{\mathrm{MEaSUREs}}$',
+                     '$k_{\mathrm{ITSlive}}$',
+                     '$k_{\mathrm{RACMO}}$'], loc='upper right', fontsize=19)
 
 
 
@@ -143,34 +143,34 @@ g1 = sns.catplot(x="area_class", y="calving_flux", hue='Method',
                  data=to_plot_q, kind='box', ax=ax1, legend=True,
                  palette=color_array)
 ax1.set_xticklabels(labels=['0-5', '5-15', '15-50', '50-1300'])
-ax1.set_xlabel('Area class [$km^2$]')
-ax1.set_ylabel('$q_{calving}$ [$km^3yr^{-1}$]')
+ax1.set_xlabel('Area class [km$^2$]')
+ax1.set_ylabel('$q_{\mathrm{calving}}$ [km$^3$ yr$^{-1}$]')
 at = AnchoredText('b', prop=dict(size=22), frameon=True, loc='upper left')
 ax1.add_artist(at)
 
 # replace labels
 ax1.get_legend().remove()
 handles, labels = ax1.get_legend_handles_labels()
-ax1.legend(handles, ['$q_{calving-MEaSUREs}$',
-                     '$q_{calving-ITSlive}$',
-                     '$q_{calving-RACMO}$'], loc='upper center', fontsize=19)
+ax1.legend(handles, ['$q_{\mathrm{calving-MEaSUREs}}$',
+                     '$q_{\mathrm{calving-ITSlive}}$',
+                     '$q_{\mathrm{calving-RACMO}}$'], loc='upper center', fontsize=19)
 
 ax2.set_yscale("log")
 g2 = sns.catplot(x="area_class", y="calving_rate", hue='Method',
                  data=to_plot_r, kind='box', ax=ax2, legend=True,
                  palette=color_array)
 ax2.set_xticklabels(labels=['0-5', '5-15', '15-50', '50-1300'])
-ax2.set_xlabel('Area class [$km^2$]')
-ax2.set_ylabel('$r_{calving}$ [$myr^{-1}$]')
+ax2.set_xlabel('Area class [km$^2$]')
+ax2.set_ylabel('$r_{\mathrm{calving}}$ [m yr$^{-1}$]')
 at = AnchoredText('c', prop=dict(size=22), frameon=True, loc='upper left')
 ax2.add_artist(at)
 
 # replace labels
 ax2.get_legend().remove()
 handles, labels = ax2.get_legend_handles_labels()
-ax2.legend(handles, ['$r_{calving-MEaSUREs}$',
-                     '$r_{calving-ITSlive}$',
-                     '$r_{calving-RACMO}$'], loc='upper center', fontsize=19)
+ax2.legend(handles, ['$r_{\mathrm{calving-MEaSUREs}}$',
+                     '$r_{\mathrm{calving-ITSlive}}$',
+                     '$r_{\mathrm{calving-RACMO}}$'], loc='upper center', fontsize=19)
 
 plt.close(2)
 plt.close(3)

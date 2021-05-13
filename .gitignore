@@ -1,6 +1,11 @@
 cluster_scripts/01_Greenland_prepo_newoggm
+cluster_scripts/01_Greenland_prepo_marco
+cluster_scripts/02_Ice_cap_prepo_marco
 input_data
 output_data
+output_data_marco
+output_data_marco.tar
+output_data_marco.tar.gz
 plots
 .idea
 k_tools/__pycache__
