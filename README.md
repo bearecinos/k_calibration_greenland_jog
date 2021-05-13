@@ -1,6 +1,6 @@
 # OGGM frontal ablation module calibration for Greenland tidewater peripheral glaciers.
 
-This repository contains the scripts used to calibrate a frontal ablation parameterization in [OGGM](https://docs.oggm.org/en/latest/) applied to Greenland peripheral calving glaciers and produce the results of the paper submitted to Journal of Glaciology. *Recinos, B. et al (in review)*
+This repository contains the scripts used to calibrate a frontal ablation parameterization in [OGGM](https://docs.oggm.org/en/latest/) applied to Greenland Peripheral calving glaciers and produce the results of the paper accepted for publication in Journal of Glaciology. *Recinos, B. et al (accepted)*
 
 This repository uses [OGGMv1.3.2](https://github.com/OGGM/oggm/releases/tag/v1.3.2). 
 
@@ -16,8 +16,6 @@ The contents of the repository are the following:
 - `plotting_scripts`: Python scripts to produce the images in Recinos, et. al. (in review)
 - `results_scripts`: Python scripts to summarize the output of the model after implementing the different calibration methods.
 - `config.ini`: Global paths to data input and output. 
-
-
 
 *Citation for this repository:*
 
