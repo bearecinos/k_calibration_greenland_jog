@@ -20,7 +20,9 @@ import oggm.cfg as cfg
 from oggm import workflow
 from oggm import tasks
 from oggm.workflow import execute_entity_task
+from oggm import utils
 from oggm.core import inversion
+from oggm.shop import rgitopo
 
 # Time
 import time
@@ -134,9 +136,7 @@ for task in task_list:
 for gdir in gdirs:
     gdir.inversion_calving_rate = 0
 
-execute_entity_task(tasks.process_cru_data, gdirs)
-execute_entity_task(tasks.local_t_star, gdirs)
-execute_entity_task(tasks.mu_star_calibration, gdirs)
+workflow.climate_tasks(gdirs, base_url=config['climate_url'])
 
 # Inversion tasks
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
@@ -149,42 +149,42 @@ filesuffix = '_greenland_no_calving_with_sliding_'
 df_stats.to_csv(os.path.join(cfg.PATHS['working_dir'],
                              ('glacier_statistics' + filesuffix + '.csv')))
 
-# Log
-m, s = divmod(time.time() - start, 60)
-h, m = divmod(m, 60)
-log.info("OGGM is done! Time needed: %02d:%02d:%02d" % (h, m, s))
-
-cfg.PARAMS['continue_on_error'] = False
-
-glac_errors = []
-glac_dont_calve = []
-
-# Compute a calving flux
-for gdir in gdirs:
-    try:
-        out = inversion.find_inversion_calving(gdir)
-    except:
-        print('there was an error in calving', gdir.rgi_id)
-        glac_errors = np.append(glac_errors, gdir.rgi_id)
-        pass
-    if out is None:
-        glac_dont_calve = np.append(glac_dont_calve, gdir.rgi_id)
-        pass
-
-d = {'RGIId': glac_errors}
-df = pd.DataFrame(data=d)
-df.to_csv(os.path.join(WORKING_DIR, 'glaciers_with_prepro_errors'+'.csv'))
-
-s = {'RGIId': glac_dont_calve}
-ds = pd.DataFrame(data=s)
-ds.to_csv(os.path.join(WORKING_DIR,
-                       'glaciers_dont_calve_with_cgf_params'+'.csv'))
-
-cfg.PARAMS['continue_on_error'] = True
-
-df_stats_c = misc.compile_exp_statistics(gdirs)
-
-filesuffix_c = '_greenland_calving_with_sliding'
-
-df_stats_c.to_csv(os.path.join(cfg.PATHS['working_dir'],
-                               ('glacier_statistics' + filesuffix_c + '.csv')))
+# # Log
+# m, s = divmod(time.time() - start, 60)
+# h, m = divmod(m, 60)
+# log.info("OGGM is done! Time needed: %02d:%02d:%02d" % (h, m, s))
+#
+# cfg.PARAMS['continue_on_error'] = False
+#
+# glac_errors = []
+# glac_dont_calve = []
+#
+# # Compute a calving flux
+# for gdir in gdirs:
+#     try:
+#         out = inversion.find_inversion_calving(gdir)
+#     except:
+#         print('there was an error in calving', gdir.rgi_id)
+#         glac_errors = np.append(glac_errors, gdir.rgi_id)
+#         pass
+#     if out is None:
+#         glac_dont_calve = np.append(glac_dont_calve, gdir.rgi_id)
+#         pass
+#
+# d = {'RGIId': glac_errors}
+# df = pd.DataFrame(data=d)
+# df.to_csv(os.path.join(WORKING_DIR, 'glaciers_with_prepro_errors'+'.csv'))
+#
+# s = {'RGIId': glac_dont_calve}
+# ds = pd.DataFrame(data=s)
+# ds.to_csv(os.path.join(WORKING_DIR,
+#                        'glaciers_dont_calve_with_cgf_params'+'.csv'))
+#
+# cfg.PARAMS['continue_on_error'] = True
+#
+# df_stats_c = misc.compile_exp_statistics(gdirs)
+#
+# filesuffix_c = '_greenland_calving_with_sliding'
+#
+# df_stats_c.to_csv(os.path.join(cfg.PATHS['working_dir'],
+#                                ('glacier_statistics' + filesuffix_c + '.csv')))
