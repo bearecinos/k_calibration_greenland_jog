@@ -57,6 +57,7 @@ cfg.PARAMS['use_multiprocessing'] = True
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
+cfg.PARAMS['clip_mu_star'] = True
 cfg.PARAMS['inversion_fs'] = 5.7e-20
 cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
@@ -157,6 +158,8 @@ h, m = divmod(m, 60)
 log.info("OGGM is done! Time needed: %02d:%02d:%02d" % (h, m, s))
 
 cfg.PARAMS['continue_on_error'] = False
+cfg.PARAMS['use_kcalving_for_inversion'] = True
+cfg.PARAMS['use_kcalving_for_ru'] = True
 
 glac_errors = []
 glac_dont_calve = []

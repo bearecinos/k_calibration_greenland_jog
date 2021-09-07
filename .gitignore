@@ -4,6 +4,7 @@ cluster_scripts/02_Ice_cap_prepo_marco
 cluster_scripts/**/*.out
 input_data
 output_data
+output_data_jog_paper
 output_data_marco
 output_data_marco.tar
 output_data_marco.tar.gz
