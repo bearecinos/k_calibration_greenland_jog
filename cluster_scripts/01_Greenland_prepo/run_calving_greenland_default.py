@@ -48,6 +48,8 @@ MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
 sys.path.append(MAIN_PATH)
 config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 
+input_data_path = os.path.expanduser('~/'+config['input_data_folder'])
+
 from k_tools import misc
 
 # Use multiprocessing
@@ -62,11 +64,11 @@ cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
 
 # RGI file
-rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
+rgidf = gpd.read_file(os.path.join(input_data_path, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
 
 # We use intersects
-cfg.set_intersects_db(os.path.join(MAIN_PATH, config['intercepts']))
+cfg.set_intersects_db(os.path.join(input_data_path, config['intercepts']))
 
 # Get glaciers that belong to the ice cap.
 rgidf_ice_cap = rgidf[rgidf['RGIId'].str.match('RGI60-05.10315')]
@@ -88,7 +90,7 @@ keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
 # Remove glaciers that need to be model with gimp
-df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
+df_gimp = pd.read_csv(os.path.join(input_data_path, config['glaciers_gimp']))
 keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
 keep_gimp = [(i in df_gimp.RGIId.values) for i in rgidf.RGIId]
 rgidf_gimp = rgidf.iloc[keep_gimp]
