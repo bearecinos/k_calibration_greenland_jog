@@ -1,5 +1,5 @@
 # This will run OGGM preprocessing task and the inversion with calving
-# For Greenland with default MB calibration and DEM: Glims
+# For Greenland with default MB calibration and DEM: GLIMS and ArcticDEM
 from __future__ import division
 
 # Module logger
@@ -14,6 +14,7 @@ import salem
 import numpy as np
 import pandas as pd
 from configobj import ConfigObj
+import argparse
 
 # Locals
 import oggm.cfg as cfg
@@ -22,38 +23,51 @@ from oggm import tasks
 from oggm.workflow import execute_entity_task
 from oggm import utils
 from oggm.core import inversion
-from oggm.shop import rgitopo
 
 # Time
 import time
 start = time.time()
 
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+parser.add_argument("-mode", type=bool, default=False, help="pass running mode")
+args = parser.parse_args()
+config_file = args.conf
+run_mode = args.mode
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
+input_data_path = config['input_data_folder']
+sys.path.append(MAIN_PATH)
+# Import our own module
+from k_tools import misc
+
 # Regions:
 # Greenland
 rgi_region = '05'
+rgi_version = '61'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------
-
 cfg.initialize()
 
-rgi_version = '61'
-
-SLURM_WORKDIR = os.environ["WORKDIR"]
-# Local paths (where to write output and where to download input)
-WORKING_DIR = SLURM_WORKDIR
-cfg.PATHS['working_dir'] = WORKING_DIR
-
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
-sys.path.append(MAIN_PATH)
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
-
-input_data_path = os.path.expanduser('~/'+config['input_data_folder'])
-
-from k_tools import misc
+# Define working directories (either local if run_mode = true)
+# or in the cluster environment
+if run_mode:
+    cfg.PATHS['working_dir'] = utils.get_temp_dir('GP-test-run')
+else:
+    SLURM_WORKDIR = os.environ["OUTDIR"]
+    # Local paths (where to write output and where to download input)
+    WORKING_DIR = SLURM_WORKDIR
+    cfg.PATHS['working_dir'] = WORKING_DIR
 
 # Use multiprocessing
-cfg.PARAMS['use_multiprocessing'] = True
+if run_mode:
+    cfg.PARAMS['use_multiprocessing'] = False
+else:
+    # ONLY IN THE CLUSTER!
+    cfg.PARAMS['use_multiprocessing'] = True
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
@@ -63,6 +77,7 @@ cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
+cfg.PARAMS['clip_tidewater_border'] = False
 
 # RGI file
 rgidf = gpd.read_file(os.path.join(input_data_path, config['RGI_FILE']))
@@ -107,17 +122,25 @@ log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 
 # Go - initialize working directories
 # -----------------------------------
-gdirs = workflow.init_glacier_directories(rgidf)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
-                             source='ARCTICDEM')
+if run_mode:
+    keep_index_to_run = [(i in config['RGI_id_to_test']) for i in rgidf.RGIId]
+    rgidf = rgidf.iloc[keep_index_to_run]
+    log.info('Starting run for RGI reg: ' + rgi_region)
+    log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
+    gdirs = workflow.init_glacier_directories(rgidf)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                                 source='ARCTICDEM')
+else:
+    gdirs = workflow.init_glacier_directories(rgidf)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                                 source='ARCTICDEM')
 
-gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
-                             source='GIMP')
+    gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+                                 source='GIMP')
+    gdirs.extend(gdirs_gimp)
 
-gdirs.extend(gdirs_gimp)
-
-# print(gdirs)
+#print(gdirs)
 #
 # execute_entity_task(tasks.glacier_masks, gdirs)
 
@@ -178,11 +201,11 @@ for gdir in gdirs:
 
 d = {'RGIId': glac_errors}
 df = pd.DataFrame(data=d)
-df.to_csv(os.path.join(WORKING_DIR, 'glaciers_with_prepro_errors'+'.csv'))
+df.to_csv(os.path.join(cfg.PATHS['working_dir'], 'glaciers_with_prepro_errors'+'.csv'))
 
 s = {'RGIId': glac_dont_calve}
 ds = pd.DataFrame(data=s)
-ds.to_csv(os.path.join(WORKING_DIR,
+ds.to_csv(os.path.join(cfg.PATHS['working_dir'],
                        'glaciers_dont_calve_with_cgf_params'+'.csv'))
 
 cfg.PARAMS['continue_on_error'] = True
@@ -193,3 +216,5 @@ filesuffix_c = '_greenland_calving_with_sliding'
 
 df_stats_c.to_csv(os.path.join(cfg.PATHS['working_dir'],
                                ('glacier_statistics' + filesuffix_c + '.csv')))
+
+misc.reset_per_glacier_working_dir()

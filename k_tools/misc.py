@@ -1,8 +1,10 @@
 import numpy as np
 import logging
 import geopandas as gpd
+import oggm.cfg
 import pandas as pd
 import os
+import shutil
 import xarray as xr
 import pickle
 from salem import wgs84
@@ -712,3 +714,10 @@ def plot_inversion_diff(gdirs, ax=None, smap=None,
     return dict(cbar_label='delta thickness \n [m]',
                 cbar_primitive=dl,
                 title_comment=' ({:.2f} km3)'.format(np.nansum(vol) * 1e-9))
+
+def reset_per_glacier_working_dir():
+    """Deletes the content of the working directory. Careful: cannot be undone!
+    """
+    if oggm.cfg.PATHS['working_dir']:
+        if os.path.exists(oggm.cfg.PATHS['working_dir'] + '/per_glacier'):
+            shutil.rmtree(oggm.cfg.PATHS['working_dir'] + '/per_glacier')
