@@ -62,12 +62,18 @@ else:
     WORKING_DIR = SLURM_WORKDIR
     cfg.PATHS['working_dir'] = WORKING_DIR
 
+
+print(cfg.PATHS['working_dir'])
+
 # Use multiprocessing
 if run_mode:
     cfg.PARAMS['use_multiprocessing'] = False
 else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
+    cfg.PARAMS['mp_processes'] = 16
+
+
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
