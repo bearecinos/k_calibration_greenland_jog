@@ -69,6 +69,9 @@ if run_mode:
 else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
+    cfg.PARAMS['mp_processes'] = 16
+
+
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
@@ -142,9 +145,7 @@ for task in task_list:
 for gdir in gdirs:
     gdir.inversion_calving_rate = 0
 
-execute_entity_task(tasks.process_cru_data, gdirs)
-execute_entity_task(tasks.local_t_star, gdirs)
-execute_entity_task(tasks.mu_star_calibration, gdirs)
+workflow.climate_tasks(gdirs, base_url=config['climate_url'])
 
 # Inversion tasks
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
