@@ -2,6 +2,7 @@ cluster_scripts/01_Greenland_prepo_newoggm
 cluster_scripts/01_Greenland_prepo_marco
 cluster_scripts/02_Ice_cap_prepo_marco
 cluster_scripts/**/*.out
+cluster_scripts/**/*.txt
 input_data
 output_data
 output_data_jog_paper
