@@ -91,7 +91,7 @@ rgidf = rgidf.sort_values('RGIId', ascending=True)
 if not run_mode:
     # Read Areas for the ice-cap computed in OGGM during
     # the pre-processing runs
-    df_prepro_ic = pd.read_csv(os.path.join(input_data_path,
+    df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
                                             config['ice_cap_prepro']))
 
     df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
