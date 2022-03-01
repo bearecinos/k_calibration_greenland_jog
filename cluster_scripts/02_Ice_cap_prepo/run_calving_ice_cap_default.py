@@ -100,6 +100,14 @@ ice_cap_ids = rgidf_ice_cap.RGIId.values
 keep_indexes = [(i in ice_cap_ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_indexes]
 
+# Remove glaciers that need to be model with gimp
+df_gimp = pd.read_csv(os.path.join(input_data_path, config['glaciers_gimp']))
+keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
+keep_gimp = [(i in df_gimp.RGIId.values) for i in rgidf.RGIId]
+rgidf_gimp = rgidf.iloc[keep_gimp]
+
+rgidf = rgidf.iloc[keep_indexes_no_gimp]
+
 # # Remove pre-pro errors
 # de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
 # ids = de.RGIId.values
@@ -123,9 +131,13 @@ if run_mode:
     gdirs = workflow.init_glacier_directories(rgidf)
 else:
     gdirs = workflow.init_glacier_directories(rgidf)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                                 source='ARCTICDEM')
 
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
-                             source='ARCTICDEM')
+    gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+                                 source='GIMP')
+    gdirs.extend(gdirs_gimp)
 
 execute_entity_task(tasks.glacier_masks, gdirs)
 
