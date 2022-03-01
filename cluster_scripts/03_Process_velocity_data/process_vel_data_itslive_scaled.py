@@ -58,7 +58,7 @@ cfg.initialize()
 if run_mode:
     cfg.PATHS['working_dir'] = utils.get_temp_dir('GP-test-run')
 else:
-    SLURM_WORKDIR = os.environ["WORKDIR"]
+    SLURM_WORKDIR = os.environ["OUTDIR"]
     # Local paths (where to write output and where to download input)
     WORKING_DIR = SLURM_WORKDIR
     cfg.PATHS['working_dir'] = WORKING_DIR
@@ -69,6 +69,7 @@ if run_mode:
 else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
+    cfg.PARAMS['mp_processes'] = 16
 
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
@@ -92,7 +93,7 @@ rgidf = rgidf.sort_values('RGIId', ascending=True)
 if not run_mode:
     # Read Areas for the ice-cap computed in OGGM during
     # the pre-processing runs
-    df_prepro_ic = pd.read_csv(os.path.join(input_data_path,
+    df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
                                             config['ice_cap_prepro']))
 
     df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
