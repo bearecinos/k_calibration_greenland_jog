@@ -3,7 +3,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --time=24:00:00
-#SBATCH --mail-user=recinos@uni-bremen.de
+#SBATCH --mail-user=beatriz.recinos@ed.ac.uk
 #SBATCH --mail-type=ALL
 
 # Abort whenever a single step fails. Without this, bash will just continue on errors.
