@@ -6,6 +6,7 @@
 # Python imports
 from __future__ import division
 import os
+import glob
 import sys
 import numpy as np
 import geopandas as gpd
@@ -169,62 +170,62 @@ h, m = divmod(m, 60)
 log.info("OGGM preprocessing finished! Time needed: %02d:%02d:%02d" %
          (h, m, s))
 
-ids = []
-vel_fls_avg = []
-err_fls_avg = []
-vel_calving_front = []
-err_calving_front = []
-rel_tol_fls = []
-rel_tol_calving_front = []
-length_fls = []
+path_h = glob.glob(os.path.join(input_data_path, config['h_file']))
+path_h_e = glob.glob(os.path.join(input_data_path, config['h_error_file']))
 
-files_no_data = []
+for f, e in zip(path_h, path_h_e):
+    file_name = os.path.basename(f)[0:-4]
+    ds = utils_h.open_thick_raster(f)
+    dr = utils_h.open_thick_raster(e)
 
-ds = utils_h.open_thick_raster(os.path.join(input_data_path,
-                                              config['h_file_path']))
-dr = utils_h.open_thick_raster(os.path.join(input_data_path,
-                                              config['h_error_file_path']))
+    data_frame = []
+    rgi_ids = []
+    thick_end = []
+    error_end = []
 
-data_frame = []
-rgi_ids = []
-thick_end = []
-error_end = []
+    for gdir in gdirs:
 
-for gdir in gdirs:
+        # first we compute the centerlines as shapefile to crop the satellite
+        # data
+        misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+        shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+        shp = gpd.read_file(shp_path)
 
-    # first we compute the centerlines as shapefile to crop the satellite
-    # data
-    misc.write_flowlines_to_shape(gdir, path=gdir.dir)
-    shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
-    shp = gpd.read_file(shp_path)
+        ds_fls, dr_fls = utils_h.crop_thick_data_to_flowline(ds, dr, shp)
 
-    ds_fls, dr_fls = utils_h.crop_thick_data_to_flowline(ds, dr, shp)
+        thick, error, lon, lat = utils_h.calculate_observation_thickness(gdir,
+                                                                         ds_fls,
+                                                                         dr_fls,
+                                                                         return_profile=True)
 
-    thick, error, lon, lat = utils_h.calculate_observation_thickness(gdir,
-                                                                     ds_fls,
-                                                                     dr_fls,
-                                                                     return_profile=True)
+        if thick.size == 0:
+            log.info('probably this glacier is not in the thickness raster ' + gdir.rgi_id)
+            continue
 
-    d = {'H_flowline': thick,
-         'H_flowline_error': error,
-         'lon': lon,
-         'lat': lat
+        d = {'H_flowline': thick,
+             'H_flowline_error': error,
+             'lon': lon,
+             'lat': lat
+             }
+        data_frame = pd.DataFrame(data=d)
+        data_frame.to_csv(os.path.join(cfg.PATHS['working_dir'], gdir.rgi_id + '.csv'))
+
+        thick_f, error_f = utils_h.calculate_observation_thickness(gdir,
+                                                                   ds_fls,
+                                                                   dr_fls)
+
+        rgi_ids = np.append(rgi_ids, gdir.rgi_id)
+        thick_end = np.append(thick_end, thick_f)
+        error_end = np.append(error_end, error_f)
+
+    log.info('processing of thickness over for this raster file: ' + file_name)
+
+    dr = {'RGI_ID': rgi_ids,
+          'thick_end': thick_end,
+          'error_end': error_end,
          }
-    data_frame = pd.DataFrame(data=d)
-    data_frame.to_csv(os.path.join(cfg.PATHS['working_dir'], gdir.rgi_id + '.csv'))
 
-    thick_f, error_f = utils_h.calculate_observation_thickness(gdir,
-                                                               ds_fls,
-                                                               dr_fls)
+    df_r = pd.DataFrame(data=dr)
+    df_r.to_csv(cfg.PATHS['working_dir'] + '/thickness_observations_'+ file_name +'.csv')
 
-    rgi_ids = np.append(rgi_ids, gdir.rgi_id)
-    thick_end = np.append(thick_end, thick_f)
-    error_end = np.append(error_end, error_f)
-
-dr = {'RGI_ID': rgi_ids,
-      'thick_end': thick_end,
-      'error_end': error_end,
-     }
-
-df_r = pd.DataFrame(data=dr)
-df_r.to_csv(cfg.PATHS['working_dir'] + '/thickness_observations.csv')
+misc.reset_per_glacier_working_dir()
