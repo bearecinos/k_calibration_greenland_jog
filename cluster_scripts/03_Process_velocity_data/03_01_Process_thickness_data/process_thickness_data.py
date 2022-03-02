@@ -92,12 +92,12 @@ rgidf = rgidf.sort_values('RGIId', ascending=True)
 if not run_mode:
     # Read Areas for the ice-cap computed in OGGM during
     # the pre-processing runs
-    df_prepro_ic = pd.read_csv(os.path.join(input_data_path,
+    df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
                                             config['ice_cap_prepro']))
 
     df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
 
-    # AND assign an area to the ice cap basin from OGGM to avoid errors
+    # Assign an area to the ice cap from OGGM to avoid errors
     rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
               'Area'] = df_prepro_ic.rgi_area_km2.values
 
@@ -180,10 +180,15 @@ length_fls = []
 
 files_no_data = []
 
-dvel = utils_vel.open_vel_raster(os.path.join(input_data_path,
+ds = utils_h.open_thick_raster(os.path.join(input_data_path,
                                               config['vel_path']))
-derr = utils_vel.open_vel_raster(os.path.join(input_data_path,
+dr = utils_h.open_thick_raster(os.path.join(input_data_path,
                                               config['error_vel_path']))
+
+data_frame = []
+rgi_ids = []
+thick_end = []
+error_end = []
 
 for gdir in gdirs:
 
@@ -192,3 +197,34 @@ for gdir in gdirs:
     misc.write_flowlines_to_shape(gdir, path=gdir.dir)
     shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
     shp = gpd.read_file(shp_path)
+
+    ds_fls, dr_fls = utils_h.crop_thick_data_to_flowline(ds, dr, shp)
+
+    thick, error, lon, lat = utils_h.calculate_observation_thickness(gdir,
+                                                                     ds_fls,
+                                                                     dr_fls,
+                                                                     return_profile=True)
+
+    d = {'H_flowline': thick,
+         'H_flowline_error': error,
+         'lon': lon,
+         'lat': lat
+         }
+    data_frame = pd.DataFrame(data=d)
+    data_frame.to_csv(os.path.join(cfg.PATHS['working_dir'], gdir.rgi_id + '.csv'))
+
+    thick_f, error_f = utils_h.calculate_observation_thickness(gdir,
+                                                               ds_fls,
+                                                               dr_fls)
+
+    rgi_ids = np.append(rgi_ids, gdir.rgi_id)
+    thick_end = np.append(thick_end, thick_f)
+    error_end = np.append(error_end, error_f)
+
+dr = {'RGI_ID': rgi_ids,
+      'thick_end': thick_end,
+      'error_end': error_end,
+     }
+
+df_r = pd.DataFrame(data=dr)
+df_r.to_csv(cfg.PATHS['working_dir'] + '/thickness_observations.csv')
