@@ -8,6 +8,8 @@ import xarray as xr
 from collections import defaultdict
 from oggm import cfg
 from oggm.utils._workflow import ncDataset
+from oggm import utils
+from oggm import entity_task
 
 # Module logger
 log = logging.getLogger(__name__)
@@ -165,9 +167,9 @@ def get_racmo_std_from_moving_avg(ds_sel_roi,
 
     return std
 
-
+@utils.entity_task(log)
 def process_racmo_data(gdir,
-                       racmo_path,
+                       racmo_path=None,
                        time_start=None, time_end=None, alias=None):
     """Processes and writes RACMO data in each glacier directory. Computing
     time series of the data for a reference period

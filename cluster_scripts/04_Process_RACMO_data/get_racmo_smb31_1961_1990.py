@@ -172,14 +172,14 @@ time_start = '1961-01-01'
 time_end = '1990-12-31'
 alias = 'AS'
 
+workflow.execute_entity_task(utils_racmo.process_racmo_data,
+                             gdirs,
+                             racmo_path=racmo_path,
+                             time_start=time_start,
+                             time_end=time_end,
+                             alias=alias)
+
 for gdir in gdirs:
-
-    utils_racmo.process_racmo_data(gdir,
-                                   racmo_path,
-                                   time_start=time_start,
-                                   time_end=time_end,
-                                   alias=alias)
-
     # We compute a calving flux from RACMO data
     out = utils_racmo.get_smb31_from_glacier(gdir)
 
@@ -202,7 +202,7 @@ for gdir in gdirs:
 d = {'RGIId': files_no_data}
 df = pd.DataFrame(data=d)
 
-df.to_csv(cfg.PATHS['working_dir'] + 'glaciers_with_no_racmo_data.csv')
+df.to_csv(os.path.join(cfg.PATHS['working_dir'], 'glaciers_with_no_racmo_data.csv'))
 
 dr = {'RGI_ID': ids,
       'smb_mean': smb_avg,
@@ -213,6 +213,6 @@ dr = {'RGI_ID': ids,
       'q_calving_RACMO_cum': racmo_calving_cum}
 
 df_r = pd.DataFrame(data=dr)
-df_r.to_csv(cfg.PATHS['working_dir']+'racmo_data_'+time_start+'_'+time_end+'.csv')
+df_r.to_csv(os.path.join(cfg.PATHS['working_dir'], 'racmo_data_'+time_start+'_'+time_end+'.csv'))
 
 misc.reset_per_glacier_working_dir()

@@ -120,11 +120,6 @@ ids = de.RGIId.values
 keep_errors = [(i not in ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_errors]
 
-# # Run a single id for testing
-# glacier = ['RGI60-05.00304', 'RGI60-05.08443']
-# keep_indexes = [(i in glacier) for i in rgidf.RGIId]
-# rgidf = rgidf.iloc[keep_indexes]
-
 # Remove glaciers that need to be model with gimp
 df_gimp = pd.read_csv(os.path.join(input_data_path, config['glaciers_gimp']))
 keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
@@ -179,14 +174,15 @@ time_start = '1995-10-01'
 time_end = '2015-10-01'
 alias= 'AS-Oct'
 
+
+workflow.execute_entity_task(utils_racmo.process_racmo_data,
+                             gdirs,
+                             racmo_path=racmo_path,
+                             time_start=time_start,
+                             time_end=time_end,
+                             alias=alias)
+
 for gdir in gdirs:
-
-    utils_racmo.process_racmo_data(gdir,
-                                   racmo_path,
-                                   time_start=time_start,
-                                   time_end=time_end,
-                                   alias=alias)
-
     # We compute a calving flux from RACMO data
     out = utils_racmo.get_smb31_from_glacier(gdir)
 
@@ -209,7 +205,7 @@ for gdir in gdirs:
 d = {'RGIId': files_no_data}
 df = pd.DataFrame(data=d)
 
-df.to_csv(cfg.PATHS['working_dir'] + 'glaciers_with_no_racmo_data.csv')
+df.to_csv(os.path.join(cfg.PATHS['working_dir'], 'glaciers_with_no_racmo_data.csv'))
 
 dr = {'RGI_ID': ids,
       'smb_mean': smb_avg,
@@ -220,6 +216,6 @@ dr = {'RGI_ID': ids,
       'q_calving_RACMO_cum': racmo_calving_cum}
 
 df_r = pd.DataFrame(data=dr)
-df_r.to_csv(cfg.PATHS['working_dir']+'racmo_data_'+time_start+time_end+'_.csv')
+df_r.to_csv(os.path.join(cfg.PATHS['working_dir'], 'racmo_data_'+time_start+'_'+time_end+'.csv'))
 
 misc.reset_per_glacier_working_dir()
