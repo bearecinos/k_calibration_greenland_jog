@@ -58,7 +58,7 @@ cfg.initialize()
 if run_mode:
     cfg.PATHS['working_dir'] = utils.get_temp_dir('GP-test-run')
 else:
-    SLURM_WORKDIR = os.environ["OUTDIR"]
+    SLURM_WORKDIR = os.environ.get("OUTDIR")
     # Local paths (where to write output and where to download input)
     WORKING_DIR = SLURM_WORKDIR
     cfg.PATHS['working_dir'] = WORKING_DIR
@@ -170,8 +170,8 @@ h, m = divmod(m, 60)
 log.info("OGGM preprocessing finished! Time needed: %02d:%02d:%02d" %
          (h, m, s))
 
-path_h = glob.glob(os.path.join(input_data_path, config['h_file']))
-path_h_e = glob.glob(os.path.join(input_data_path, config['h_error_file']))
+path_h = sorted(glob.glob(os.path.join(input_data_path, config['h_file'])))
+path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file'])))
 
 for f, e in zip(path_h, path_h_e):
     file_name = os.path.basename(f)[0:-4]
