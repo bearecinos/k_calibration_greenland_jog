@@ -181,9 +181,9 @@ length_fls = []
 files_no_data = []
 
 ds = utils_h.open_thick_raster(os.path.join(input_data_path,
-                                              config['vel_path']))
+                                              config['h_file_path']))
 dr = utils_h.open_thick_raster(os.path.join(input_data_path,
-                                              config['error_vel_path']))
+                                              config['h_error_file_path']))
 
 data_frame = []
 rgi_ids = []
