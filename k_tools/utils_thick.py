@@ -202,16 +202,16 @@ def thick_data_to_gdir(gdir, ds=None, dr=None):
     dr: Xarray.Dataframe with thickness error
     """
 
-    # misc.write_flowlines_to_shape(gdir, path=gdir.dir)
-    # shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
-    # shp = gpd.read_file(shp_path)
-    #
-    # ds_fls, dr_fls = crop_thick_data_to_flowline(ds, dr, shp)
+    misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+    shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+    shp = gpd.read_file(shp_path)
+
+    ds_fls, dr_fls = crop_thick_data_to_flowline(ds, dr, shp)
 
 
     thick, error, lon, lat = calculate_observation_thickness(gdir,
-                                                             ds,
-                                                             dr)
+                                                             ds_fls,
+                                                             dr_fls)
 
     out = {"h": thick,
            "error": error,
