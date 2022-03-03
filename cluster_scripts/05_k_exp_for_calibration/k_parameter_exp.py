@@ -43,7 +43,7 @@ sys.path.append(MAIN_PATH)
 from k_tools import utils_velocity as utils_vel
 from k_tools import misc
 
-# Regions: Greenland
+# Region Greenland
 rgi_region = '05'
 rgi_version = '61'
 
@@ -169,9 +169,7 @@ for task in task_list:
 for gdir in gdirs:
     gdir.inversion_calving_rate = 0
 
-execute_entity_task(tasks.process_cru_data, gdirs)
-execute_entity_task(tasks.local_t_star, gdirs)
-execute_entity_task(tasks.mu_star_calibration, gdirs)
+workflow.climate_tasks(gdirs, base_url=config['climate_url'])
 
 # Inversion tasks
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
@@ -182,6 +180,9 @@ m, s = divmod(time.time() - start, 60)
 h, m = divmod(m, 60)
 log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" %
          (h, m, s))
+
+cfg.PARAMS['use_kcalving_for_inversion'] = True
+cfg.PARAMS['use_kcalving_for_ru'] = True
 
 k_factors = np.arange(0.01, 3.01, 0.01)
 
@@ -230,5 +231,3 @@ for gdir in gdirs:
     df = pd.DataFrame(data=d)
 
     df.to_csv(os.path.join(cfg.PATHS['working_dir'], gdir.rgi_id + '.csv'))
-
-misc.reset_per_glacier_working_dir()

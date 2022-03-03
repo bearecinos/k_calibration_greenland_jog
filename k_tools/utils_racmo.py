@@ -9,7 +9,6 @@ from collections import defaultdict
 from oggm import cfg
 from oggm.utils._workflow import ncDataset
 from oggm import utils
-from oggm import entity_task
 
 # Module logger
 log = logging.getLogger(__name__)
