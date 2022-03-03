@@ -11,7 +11,6 @@ import xarray as xr
 import geopandas as gpd
 from oggm import utils
 from k_tools import misc
-from IPython import embed
 
 # Module logger
 log = logging.getLogger(__name__)
