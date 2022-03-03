@@ -1,13 +1,17 @@
+import os
 import logging
 import numpy as np
 import rasterio
-from affine import Affine
 import salem
-from k_tools.misc import _get_flowline_lonlat
+import pickle
 import pyproj
+from affine import Affine
 from salem import wgs84
 import xarray as xr
-from oggm import entity_task
+import geopandas as gpd
+from oggm import utils
+from k_tools import misc
+from IPython import embed
 
 # Module logger
 log = logging.getLogger(__name__)
@@ -136,24 +140,22 @@ def dropnan_values_from_xarray(array,
     else:
         return array_nonan.data
 
-def calculate_observation_thickness(gdir, ds_fls, dr_fls, return_profile=False):
+def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     """
-    Calculate observation thickness and error at the end of the flowline and
-    along the flowline profile.
-    if return_profile is True returns thickness data for the entire flowline as
-     an array of values: thick, error, lon, lat
-    if return_profile is False only returns data at the last pixel of the flowline
-    as values: thick, error at last pixel
+    Calculate observation thickness and error along the flowline profile.
+    gdir: Glacier directory
+    ds_fls: Thickness data along the flowline as a xarray.Dataset
+    dr_fls: Thickness error along the flowline as a xarray.Dataset
+    Returns
+    -------
+    h: numpy array with thickness data
+    error_h: numpy array with error data
+    x_coord: list of longitudes
+    y_coord: list of latitudes
     """
 
-    coords = _get_flowline_lonlat(gdir)
+    coords = misc._get_flowline_lonlat(gdir)
     x, y = coords[0].geometry[3].coords.xy
-
-    # We only want the last pixel of the main centerline as
-    # thickness changes a lot along a profile so probably
-    # the best its to just pick the last pixel
-    x_2 = x[-1]
-    y_2 = y[-1]
 
     raster_proj = pyproj.Proj(ds_fls.attrs['pyproj_srs'])
 
@@ -173,15 +175,6 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls, return_profile=False):
     H_fls['h_new'] = new_data
     H_err_fls['h_error'] = new_error
 
-    # For the end of the glacier
-    x_end, y_end = salem.gis.transform_proj(wgs84, raster_proj, x_2, y_2)
-    H_end = ds_fls.interp(x=x_end, y=y_end, method='nearest')
-    H_err_end = dr_fls.interp(x=x_end, y=y_end, method='nearest')
-
-    # Calculating means
-    ds_mean_end = H_end.mean(skipna=True).data.values
-    dr_mean_end = H_err_end.mean(skipna=True).data.values
-
     # Drop nan and get the one value per flowline coordinate
     h, x_coord, y_coord = dropnan_values_from_xarray(H_fls.h_new,
                                                      namedim_x='lon',
@@ -193,7 +186,38 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls, return_profile=False):
                                                            namedim_y='lat',
                                                            get_xy=True)
 
-    if return_profile:
-        return h, error_h, x_coord, y_coord
-    else:
-        return ds_mean_end, dr_mean_end
+
+    return h, error_h, x_coord, y_coord
+
+@utils.entity_task(log)
+def thick_data_to_gdir(gdir, ds=None, dr=None):
+    """
+    Transforms shapefiles into flowlines, crops the thick data into
+    the flowline outline and transform this into an array of points
+    Returns only the last thickness or the thickness observation
+    form Millan, et.al 2022 along the main flowline.
+
+    gdir: Glacier directory
+    ds: Xarray.Dataframe with thickness data
+    dr: Xarray.Dataframe with thickness error
+    """
+
+    # misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+    # shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+    # shp = gpd.read_file(shp_path)
+    #
+    # ds_fls, dr_fls = crop_thick_data_to_flowline(ds, dr, shp)
+
+
+    thick, error, lon, lat = calculate_observation_thickness(gdir,
+                                                             ds,
+                                                             dr)
+
+    out = {"h": thick,
+           "error": error,
+           "lon": lon,
+           "lat": lat}
+
+    fp = os.path.join(gdir.dir, 'thickness_data' + '.pkl')
+    with open(fp, 'wb') as f:
+        pickle.dump(out, f, protocol=-1)

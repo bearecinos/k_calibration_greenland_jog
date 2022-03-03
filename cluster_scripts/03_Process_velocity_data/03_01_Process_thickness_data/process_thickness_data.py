@@ -15,6 +15,7 @@ from configobj import ConfigObj
 import time
 import salem
 import argparse
+import pickle
 
 # Imports oggm
 import oggm.cfg as cfg
@@ -183,40 +184,34 @@ for f, e in zip(path_h, path_h_e):
     thick_end = []
     error_end = []
 
+    workflow.execute_entity_task(utils_h.thick_data_to_gdir,
+                                 gdirs,
+                                 ds=ds,
+                                 dr=dr)
+
     for gdir in gdirs:
+        #Now for each glacier we read the thickness data info and then store it
+        # in an easier format
+        fpath = gdir.dir + '/thickness_data.pkl'
 
-        # first we compute the centerlines as shapefile to crop the satellite
-        # data
-        misc.write_flowlines_to_shape(gdir, path=gdir.dir)
-        shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
-        shp = gpd.read_file(shp_path)
+        with open(fpath, 'rb') as handle:
+            g = pickle.load(handle)
 
-        ds_fls, dr_fls = utils_h.crop_thick_data_to_flowline(ds, dr, shp)
-
-        thick, error, lon, lat = utils_h.calculate_observation_thickness(gdir,
-                                                                         ds_fls,
-                                                                         dr_fls,
-                                                                         return_profile=True)
-
-        if thick.size == 0:
+        if g['h'].size == 0:
             log.info('probably this glacier is not in the thickness raster ' + gdir.rgi_id)
             continue
 
-        d = {'H_flowline': thick,
-             'H_flowline_error': error,
-             'lon': lon,
-             'lat': lat
+        d = {'H_flowline': g['h'],
+             'H_flowline_error': g['error'],
+             'lon': g['lon'],
+             'lat': g['lat']
              }
         data_frame = pd.DataFrame(data=d)
         data_frame.to_csv(os.path.join(cfg.PATHS['working_dir'], gdir.rgi_id + '.csv'))
 
-        thick_f, error_f = utils_h.calculate_observation_thickness(gdir,
-                                                                   ds_fls,
-                                                                   dr_fls)
-
         rgi_ids = np.append(rgi_ids, gdir.rgi_id)
-        thick_end = np.append(thick_end, thick_f)
-        error_end = np.append(error_end, error_f)
+        thick_end = np.append(thick_end, g['h'][-1])
+        error_end = np.append(error_end, g['error'][-1])
 
     log.info('processing of thickness over for this raster file: ' + file_name)
 
@@ -227,5 +222,5 @@ for f, e in zip(path_h, path_h_e):
 
     df_r = pd.DataFrame(data=dr)
     df_r.to_csv(cfg.PATHS['working_dir'] + '/thickness_observations_'+ file_name +'.csv')
-
-misc.reset_per_glacier_working_dir()
+#
+# misc.reset_per_glacier_working_dir()
