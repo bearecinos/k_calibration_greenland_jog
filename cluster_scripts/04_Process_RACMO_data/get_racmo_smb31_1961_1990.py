@@ -33,7 +33,7 @@ config_file = args.conf
 run_mode = args.mode
 
 config = ConfigObj(os.path.expanduser(config_file))
-MAIN_PATH = config['main_repo_path']
+MAIN_PATH = config['main_repo_path'] 
 input_data_path = config['input_data_folder']
 sys.path.append(MAIN_PATH)
 
