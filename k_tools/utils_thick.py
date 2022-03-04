@@ -173,7 +173,7 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     new_error = xr.DataArray(H_err_fls.data, dims=("lat", "lon"), coords={"lat": y, "lon": x})
     H_fls['h_new'] = new_data
     H_err_fls['h_error'] = new_error
-
+    
     # Drop nan and get the one value per flowline coordinate
     h, x_coord, y_coord = dropnan_values_from_xarray(H_fls.h_new,
                                                      namedim_x='lon',
@@ -208,12 +208,12 @@ def thick_data_to_gdir(gdir, ds=None, dr=None):
     ds_fls, dr_fls = crop_thick_data_to_flowline(ds, dr, shp)
 
 
-    thick, error, lon, lat = calculate_observation_thickness(gdir,
-                                                             ds_fls,
-                                                             dr_fls)
+    thick, err, lon, lat = calculate_observation_thickness(gdir,
+                                                           ds_fls,
+                                                           dr_fls)
 
     out = {"h": thick,
-           "error": error,
+           "error": err,
            "lon": lon,
            "lat": lat}
 

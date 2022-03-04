@@ -70,7 +70,7 @@ if run_mode:
 else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
-    cfg.PARAMS['mp_processes'] = 16
+    cfg.PARAMS['mp_processes'] = 20
 
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
@@ -174,7 +174,7 @@ log.info("OGGM preprocessing finished! Time needed: %02d:%02d:%02d" %
 path_h = sorted(glob.glob(os.path.join(input_data_path, config['h_file'])))
 path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file'])))
 
-for f, e in zip(path_h, path_h_e):
+for f, e in zip(path_h[2:4], path_h_e[2:4]):
     file_name = os.path.basename(f)[0:-4]
     ds = utils_h.open_thick_raster(f)
     dr = utils_h.open_thick_raster(e)
