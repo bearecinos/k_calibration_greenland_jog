@@ -15,10 +15,12 @@ from functools import partial
 from collections import OrderedDict
 from oggm import cfg, graphics, utils
 from oggm.workflow import execute_entity_task
+from oggm.core import inversion
 import netCDF4
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 import salem
+from k_tools.utils_velocity import calculate_model_vel
 
 # Module logger
 log = logging.getLogger(__name__)
@@ -721,3 +723,58 @@ def reset_per_glacier_working_dir():
     if oggm.cfg.PATHS['working_dir']:
         if os.path.exists(oggm.cfg.PATHS['working_dir'] + '/per_glacier'):
             shutil.rmtree(oggm.cfg.PATHS['working_dir'] + '/per_glacier')
+
+@utils.entity_task(log)
+def iterate_k_parameter(gdir):
+    """
+    gdir: Glacier directory to conduct the sensitivity experiment
+    Returns
+    ------
+    writes out a csv file of the experiment for each glacier
+    """
+
+    log.info('Calculating loop for '+ gdir.rgi_id)
+    k_factors = np.arange(0.01, 3.01, 0.01)
+
+    cross = []
+    surface = []
+    flux = []
+    mu_star = []
+    k_used = []
+
+    for k in k_factors:
+        # Find a calving flux.
+        cfg.PARAMS['inversion_calving_k'] = k
+        out = inversion.find_inversion_calving(gdir)
+        if out is None:
+            continue
+
+        calving_flux = out['calving_flux']
+        calving_mu_star = out['calving_mu_star']
+
+        inversion.compute_velocities(gdir)
+
+        vel_out = calculate_model_vel(gdir)
+
+        vel_surface = vel_out[2]
+        vel_cross = vel_out[3]
+
+        cross = np.append(cross, vel_cross)
+        surface = np.append(surface, vel_surface)
+        flux = np.append(flux, calving_flux)
+        mu_star = np.append(mu_star, calving_mu_star)
+        k_used = np.append(k_used, k)
+
+        if mu_star[-1] == 0:
+            break
+
+
+    d = {'k_values': k_used,
+         'velocity_cross': cross,
+         'velocity_surf': surface,
+         'calving_flux': flux,
+         'mu_star': mu_star}
+
+    df = pd.DataFrame(data=d)
+
+    df.to_csv(os.path.join(cfg.PATHS['working_dir'], gdir.rgi_id + '.csv'))
