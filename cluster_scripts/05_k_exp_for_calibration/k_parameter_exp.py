@@ -66,7 +66,8 @@ print(cfg.PATHS['working_dir'])
 
 # Use multiprocessing
 if run_mode:
-    cfg.PARAMS['use_multiprocessing'] = False
+    cfg.PARAMS['use_multiprocessing'] = True
+    cfg.PARAMS['mp_processes'] = 5
 else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
@@ -184,50 +185,5 @@ log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" %
 cfg.PARAMS['use_kcalving_for_inversion'] = True
 cfg.PARAMS['use_kcalving_for_ru'] = True
 
-k_factors = np.arange(0.01, 3.01, 0.01)
-
-for gdir in gdirs:
-    cross = []
-    surface = []
-    flux = []
-    mu_star = []
-    k_used = []
-
-    for k in k_factors:
-
-        print('Calculating loop for ', gdir.rgi_id)
-
-        # Find a calving flux.
-        cfg.PARAMS['inversion_calving_k'] = k
-        out = inversion.find_inversion_calving(gdir)
-        if out is None:
-            continue
-
-        calving_flux = out['calving_flux']
-        calving_mu_star = out['calving_mu_star']
-
-        inversion.compute_velocities(gdir)
-
-        vel_out = utils_vel.calculate_model_vel(gdir)
-
-        vel_surface = vel_out[2]
-        vel_cross = vel_out[3]
-
-        cross = np.append(cross, vel_cross)
-        surface = np.append(surface, vel_surface)
-        flux = np.append(flux, calving_flux)
-        mu_star = np.append(mu_star, calving_mu_star)
-        k_used = np.append(k_used, k)
-
-        if mu_star[-1] == 0:
-            break
-
-    d = {'k_values': k_used,
-         'velocity_cross': cross,
-         'velocity_surf': surface,
-         'calving_flux': flux,
-         'mu_star': mu_star}
-
-    df = pd.DataFrame(data=d)
-
-    df.to_csv(os.path.join(cfg.PATHS['working_dir'], gdir.rgi_id + '.csv'))
+workflow.execute_entity_task(misc.iterate_k_parameter,
+                             gdirs)
