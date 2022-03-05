@@ -20,7 +20,6 @@ import netCDF4
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 import salem
-from k_tools.utils_velocity import calculate_model_vel
 
 # Module logger
 log = logging.getLogger(__name__)
@@ -732,7 +731,7 @@ def iterate_k_parameter(gdir):
     ------
     writes out a csv file of the experiment for each glacier
     """
-
+    from k_tools.utils_velocity import calculate_model_vel
     log.info('Calculating loop for '+ gdir.rgi_id)
     k_factors = np.arange(0.01, 3.01, 0.01)
 
