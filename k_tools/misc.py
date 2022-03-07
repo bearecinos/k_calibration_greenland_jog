@@ -453,7 +453,14 @@ def solve_linear_equation(a1, b1, a2, b2):
     a = np.array([[-a1, 1], [-a2, 1]], dtype='float')
     b = np.array([b1, b2], dtype='float')
 
-    z = np.linalg.solve(a, b)
+    try:
+        z = np.linalg.solve(a, b)
+    # your code that will (maybe) throw
+    except np.linalg.LinAlgError as err:
+        if 'Singular matrix' in str(err):
+            z = [0]
+        else:
+            raise
     return z
 
 

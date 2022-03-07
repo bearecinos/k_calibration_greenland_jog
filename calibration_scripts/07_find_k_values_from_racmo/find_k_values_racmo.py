@@ -10,11 +10,18 @@ import glob
 import pickle
 from collections import defaultdict
 import geopandas as gpd
+import argparse
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+args = parser.parse_args()
+config_file = args.conf
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
+input_data_path = config['input_data_folder']
 sys.path.append(MAIN_PATH)
-
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 
 # RACMO module
 from k_tools import utils_racmo as utilsr
@@ -29,8 +36,7 @@ d_racmo = pd.read_csv(os.path.join(MAIN_PATH, config['processed_racmo']))
 output_path = os.path.join(MAIN_PATH, config['racmo_calibration_results'])
 
 # Read the RGI to store Area for statistics
-rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
-
+rgidf = gpd.read_file(os.path.join(input_data_path, config['RGI_FILE']))
 rgidf = rgidf.sort_values('RGIId', ascending=True)
 
 # Read Areas for the ice-cap computed in OGGM during
@@ -44,7 +50,7 @@ rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
           'Area'] = df_prepro_ic.rgi_area_km2.values
 
 # Exclude glaciers with prepro-erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+de = pd.read_csv(os.path.join(input_data_path, config['prepro_err']))
 ids = de.RGIId.values
 keep_errors = [(i not in ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_errors]
