@@ -104,7 +104,7 @@ if not run_mode:
               'Area'] = df_prepro_ic.rgi_area_km2.values
 
 # Repeat experiment tuned for problematic glaciers.
-dp = pd.read_csv(os.path.join(MAIN_PATH, config['problematic_glaciers']))
+dp = pd.read_csv(os.path.join(input_data_path, config['problematic_glaciers']))
 ids_p = dp.RGIId.values
 keep_problematic = [(i in ids_p) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_problematic]
