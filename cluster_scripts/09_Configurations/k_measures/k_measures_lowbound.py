@@ -69,7 +69,7 @@ if run_mode:
 else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
-    cfg.PARAMS['mp_processes'] = 16
+    cfg.PARAMS['mp_processes'] = 6
 
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
