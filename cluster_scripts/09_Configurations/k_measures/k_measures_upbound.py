@@ -255,3 +255,5 @@ df_stats_final = pd.concat([df_exp, df_vel], axis=1)
 df_stats_final.to_csv(os.path.join(cfg.PATHS['working_dir'],
                                    ('glacier_statistics_calving_' +
                                     exp_name + '.csv')))
+
+misc.reset_per_glacier_working_dir()
