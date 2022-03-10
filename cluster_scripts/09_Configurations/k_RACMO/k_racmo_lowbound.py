@@ -55,7 +55,7 @@ cfg.initialize()
 if run_mode:
     cfg.PATHS['working_dir'] = utils.get_temp_dir('GP-test-run')
 else:
-    SLURM_WORKDIR = os.environ.get("OUTDIR")
+    SLURM_WORKDIR = os.environ.get("OUTDIR_low")
     # Local paths (where to write output and where to download input)
     WORKING_DIR = SLURM_WORKDIR
     cfg.PATHS['working_dir'] = WORKING_DIR
