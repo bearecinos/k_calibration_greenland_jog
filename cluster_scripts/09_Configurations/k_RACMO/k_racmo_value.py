@@ -30,9 +30,11 @@ start = time.time()
 parser = argparse.ArgumentParser()
 parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
 parser.add_argument("-mode", type=bool, default=False, help="pass running mode")
+parser.add_argument("-correct_width", type=bool, default=False, help="correct terminus width with extra data")
 args = parser.parse_args()
 config_file = args.conf
 run_mode = args.mode
+correct_width = args.correct_width
 
 config = ConfigObj(os.path.expanduser(config_file))
 MAIN_PATH = config['main_repo_path']
@@ -89,6 +91,14 @@ rgidf.crs = salem.wgs84.srs
 # We use intersects
 cfg.set_intersects_db(os.path.join(input_data_path, config['intercepts']))
 rgidf = rgidf.sort_values('RGIId', ascending=True)
+
+# We use width corrections
+# From Will's flux gates
+data_link = os.path.join(input_data_path,
+                         'wills_data.csv')
+dfmac = pd.read_csv(data_link, index_col=0)
+dfmac = dfmac[dfmac.Region_name == 'Greenland']
+
 
 if not run_mode:
     # Read Areas for the ice-cap computed in OGGM during
@@ -187,6 +197,12 @@ task_list = [
 ]
 for task in task_list:
     execute_entity_task(task, gdirs)
+
+if correct_width:
+    for gdir in gdirs:
+        if gdir.rgi_id in dfmac.index:
+            width = dfmac.loc[gdir.rgi_id]['gate_length_km']
+            tasks.terminus_width_correction(gdir, new_width=width*1000)
 
 # Climate tasks -- we make sure that calving is = 0 for all tidewater
 for gdir in gdirs:
