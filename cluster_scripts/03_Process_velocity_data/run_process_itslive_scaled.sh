@@ -1,7 +1,7 @@
 #!/bin/bash
 # Abort whenever a single step fails. Without this, bash will just continue on errors.
 
-OUTDIR="/scratch/local/brecinos/k_calibration_greenland_jog/output_data/03_Process_velocity_data/its_live_scaled/"
+export OUTDIR="/scratch/local/brecinos/k_calibration_greenland_jog/output_data/03_Process_velocity_data/its_live_scaled/"
 mkdir -p "$OUTDIR"
 
 echo $OUTDIR
