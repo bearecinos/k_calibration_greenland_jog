@@ -52,10 +52,10 @@ rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
           'Area'] = df_prepro_ic.rgi_area_km2.values
 
 # Exclude glaciers with prepro-erros
-de = pd.read_csv(os.path.join(input_data_path, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
+#de = pd.read_csv(os.path.join(input_data_path, config['prepro_err']))
+#ids = de.RGIId.values
+#keep_errors = [(i not in ids) for i in rgidf.RGIId]
+#rgidf = rgidf.iloc[keep_errors]
 
 if not os.path.exists(output_path):
     os.makedirs(output_path)
