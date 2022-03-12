@@ -180,10 +180,6 @@ else:
     workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
                                  source='ARCTICDEM')
 
-    gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-    workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
-                                 source='GIMP')
-    gdirs.extend(gdirs_gimp)
 
 # Pre-pro tasks
 task_list = [
