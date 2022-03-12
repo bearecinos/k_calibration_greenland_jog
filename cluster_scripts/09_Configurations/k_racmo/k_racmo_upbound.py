@@ -57,7 +57,7 @@ cfg.initialize()
 if run_mode:
     cfg.PATHS['working_dir'] = utils.get_temp_dir('GP-test-run')
 else:
-    SLURM_WORKDIR = os.environ.get("OUTDIR_obs")
+    SLURM_WORKDIR = os.environ.get("OUTDIR_up")
     # Local paths (where to write output and where to download input)
     WORKING_DIR = SLURM_WORKDIR
     cfg.PATHS['working_dir'] = WORKING_DIR
@@ -180,10 +180,6 @@ else:
     workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
                                  source='ARCTICDEM')
 
-    gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-    workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
-                                 source='GIMP')
-    gdirs.extend(gdirs_gimp)
 
 # Pre-pro tasks
 task_list = [
@@ -230,7 +226,7 @@ ids = []
 # Compute a calving flux
 for gdir in gdirs:
     sel = dc[dc.index == gdir.rgi_id]
-    k_value = sel.k_for_racmo_value.values
+    k_value = sel.k_for_up_bound.values
 
     cfg.PARAMS['continue_on_error'] = False
     cfg.PARAMS['inversion_calving_k'] = float(k_value)
@@ -257,7 +253,7 @@ d_vel = {'rgi_id': ids,
          'velocity_surf': surface}
 
 df_vel = pd.DataFrame(data=d_vel).set_index('rgi_id')
-exp_name = 'k_racmo_value_'
+exp_name = 'k_racmo_upbound_'
 df_vel.columns = exp_name + df_vel.columns
 
 df_stats = misc.compile_exp_statistics(gdirs)

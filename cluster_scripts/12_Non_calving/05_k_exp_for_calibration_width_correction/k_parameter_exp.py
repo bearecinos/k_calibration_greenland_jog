@@ -116,7 +116,7 @@ if not run_mode:
 
 # Only include glaciers that did not calve in previous sensitivity exp
 de = pd.read_csv(os.path.join(MAIN_PATH,
-                              'output_data/06_calibration_vel_results/itslive/glaciers_with_no_solution'))
+                              'output_data/06_calibration_vel_results/itslive/glaciers_with_no_solution.csv'))
 ids = de.RGIId.values
 keep_errors = [(i in ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_errors]

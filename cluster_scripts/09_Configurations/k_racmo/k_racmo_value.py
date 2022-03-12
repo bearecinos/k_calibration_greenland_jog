@@ -57,7 +57,7 @@ cfg.initialize()
 if run_mode:
     cfg.PATHS['working_dir'] = utils.get_temp_dir('GP-test-run')
 else:
-    SLURM_WORKDIR = os.environ.get("OUTDIR_low")
+    SLURM_WORKDIR = os.environ.get("OUTDIR_obs")
     # Local paths (where to write output and where to download input)
     WORKING_DIR = SLURM_WORKDIR
     cfg.PATHS['working_dir'] = WORKING_DIR
@@ -180,10 +180,6 @@ else:
     workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
                                  source='ARCTICDEM')
 
-    gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-    workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
-                                 source='GIMP')
-    gdirs.extend(gdirs_gimp)
 
 # Pre-pro tasks
 task_list = [
@@ -214,37 +210,10 @@ workflow.climate_tasks(gdirs, base_url=config['climate_url'])
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
 execute_entity_task(tasks.mass_conservation_inversion, gdirs)
 
-# Compile climate statistics
-utils.compile_climate_statistics(gdirs)
-
-# Find out which glaciers have negative temperatures
-RGI_ids = []
-month_count = []
-PDM_temp_free_board = []
-prcp_at_the_top = []
-
-for gdir in gdirs:
-
-    PDM_temp, month_num, prcp = misc.calculate_pdm(gdir)
-
-    RGI_ids = np.append(RGI_ids, gdir.rgi_id)
-    month_count = np.append(month_count, month_num)
-    PDM_temp_free_board = np.append(PDM_temp_free_board, PDM_temp)
-    prcp_at_the_top = np.append(prcp_at_the_top, prcp)
-
-
-d_climate = {'rgi_id': RGI_ids,
-             'Number_PDM': month_count,
-             'temp_PDM': PDM_temp_free_board,
-             'total_prcp_top': prcp_at_the_top}
-
-df_clima = pd.DataFrame(data=d_climate).set_index('rgi_id')
-
 # Log
 m, s = divmod(time.time() - start, 60)
 h, m = divmod(m, 60)
-log.info("OGGM without calving plus stats is done! "
-         "Time needed: %02d:%02d:%02d" %
+log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" %
          (h, m, s))
 
 cross = []
@@ -257,7 +226,7 @@ ids = []
 # Compute a calving flux
 for gdir in gdirs:
     sel = dc[dc.index == gdir.rgi_id]
-    k_value = sel.k_for_lw_bound.values
+    k_value = sel.k_for_racmo_value.values
 
     cfg.PARAMS['continue_on_error'] = False
     cfg.PARAMS['inversion_calving_k'] = float(k_value)
@@ -284,15 +253,14 @@ d_vel = {'rgi_id': ids,
          'velocity_surf': surface}
 
 df_vel = pd.DataFrame(data=d_vel).set_index('rgi_id')
-exp_name = 'k_racmo_lowbound_'
+exp_name = 'k_racmo_value_'
 df_vel.columns = exp_name + df_vel.columns
 
 df_stats = misc.compile_exp_statistics(gdirs)
 
-df_core = misc.get_core_data(df_stats)
 df_exp = misc.summarize_exp(df_stats, exp_name=exp_name)
 
-df_stats_final = pd.concat([df_core, df_exp, df_clima, dc, df_vel], axis=1)
+df_stats_final = pd.concat([df_exp, df_vel], axis=1)
 
 df_stats_final.to_csv(os.path.join(cfg.PATHS['working_dir'],
                                    ('glacier_statistics_calving_' +
