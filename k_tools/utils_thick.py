@@ -169,9 +169,6 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     H_fls = ds_fls.data.sel(x=lon_xr, y=lat_xr, method='nearest')
     H_err_fls = dr_fls.data.sel(x=lon_xr, y=lat_xr, method='nearest')
 
-    print(len(H_fls))
-    print(len(H_err_fls))
-
     return H_fls.data, H_err_fls.data, lon, lat
 
 @utils.entity_task(log)
