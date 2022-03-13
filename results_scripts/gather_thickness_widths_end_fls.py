@@ -29,7 +29,7 @@ config_paths = pd.read_csv(os.path.join(input_data_path,
                                         config['configuration_names']))
 
 # Reading thickness data form Millan et all 2022
-path_h = sorted(glob.glob(os.path.join(input_data_path, config['thickness_obs'])))
+path_h = os.path.join(MAIN_PATH, config['thickness_obs'])
 
 full_config_paths = []
 for configuration in config_paths.config_path:
@@ -37,7 +37,7 @@ for configuration in config_paths.config_path:
                                           configuration + '/'))
 
 print(full_config_paths)
-exit()
+
 # Make output dir
 marcos_data = os.path.join(MAIN_PATH, 'output_data_marco')
 if not os.path.exists(marcos_data):
@@ -56,7 +56,7 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
         os.makedirs(exp_dir_output)
 
     # Reading RGI
-    RGI_FILE = os.path.join(MAIN_PATH, config['RGI_FILE'])
+    RGI_FILE = os.path.join(input_data_path, config['RGI_FILE'])
     rgidf = gpd.read_file(RGI_FILE)
     rgidf.crs = salem.wgs84.srs
 
@@ -70,7 +70,7 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
     rgidf = rgidf.iloc[keep_connection]
 
     # Remove pre-pro errors
-    de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+    de = pd.read_csv(os.path.join(input_data_path, config['prepro_err']))
     ids = de.RGIId.values
     keep_errors = [(i not in ids) for i in rgidf.RGIId]
     rgidf = rgidf.iloc[keep_errors]
@@ -100,20 +100,21 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
 
     cfg.PATHS['working_dir'] = path
     print(cfg.PATHS['working_dir'])
+    cfg.PARAMS['use_multiprocessing'] = True
+    cfg.PARAMS['mp_processes'] = 16
     cfg.PARAMS['border'] = 20
     cfg.PARAMS['use_tar_shapefiles'] = False
     cfg.PARAMS['use_intersects'] = True
     cfg.PARAMS['use_compression'] = False
     cfg.PARAMS['compress_climate_netcdf'] = False
+    
 
     # gdirs = workflow.init_glacier_regions(rgidf, reset=False)
     gdirs = workflow.init_glacier_directories(rgidf.RGIId.values, reset=False)
     print('gdirs initialized')
 
     for gdir in gdirs:
-        h_obs_path = glob.glob(os.path.join(path_h, gdir.rgi_id+'*'))[0]
-        glacier_obs = pd.read_csv(h_obs_path)
-
+        
         # Get inversion output
         inv_c = gdir.read_pickle('inversion_output')[-1]
         surface = gdir.read_pickle('inversion_flowlines')[-1].surface_h
@@ -121,9 +122,9 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
         water_depth = diags['calving_front_water_depth']
         free_board = diags['calving_front_free_board']
         calving_flux = diags['calving_flux']
-        depths = np.zeros(len(inv_c['thick'][-5:]))
-        board = np.zeros(len(inv_c['thick'][-5:]))
-        flux = np.zeros(len(inv_c['thick'][-5:]))
+        depths = np.zeros(len(inv_c['thick']))
+        board = np.zeros(len(inv_c['thick']))
+        flux = np.zeros(len(inv_c['thick']))
         depths[-1:] = water_depth
         board[-1:] = free_board
         flux[-1:] = calving_flux
@@ -138,6 +139,10 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
              'calving_flux': flux}
 
         data_frame = pd.DataFrame(data=d)
-        data_frame_f = pd.concat([data_frame, glacier_obs], axis=1)
+        
+        h_obs_path = os.path.join(path_h, gdir.rgi_id+'.csv')
+        if os.path.exists(h_obs_path):
+            glacier_obs = pd.read_csv(h_obs_path)
+            data_frame = pd.concat([data_frame, glacier_obs], axis=1)
 
-        data_frame_f.to_csv(os.path.join(exp_dir_output, gdir.rgi_id + '.csv'))
+        data_frame.to_csv(os.path.join(exp_dir_output, gdir.rgi_id + '.csv'))
