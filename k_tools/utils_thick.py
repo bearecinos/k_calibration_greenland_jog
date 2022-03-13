@@ -153,40 +153,26 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     y_coord: list of latitudes
     """
 
-    coords = misc._get_flowline_lonlat(gdir)
-    x, y = coords[0].geometry[3].coords.xy
+    coords = utils._workflow.get_centerline_lonlat(gdir,
+                                                   flowlines_output=True)[-1]['geometry'].coords
+
+
+    lon = coords.xy[0]
+    lat = coords.xy[1]
 
     raster_proj = pyproj.Proj(ds_fls.attrs['pyproj_srs'])
 
-    # We will also get data for the entire flowline
-    x_all, y_all = salem.gis.transform_proj(wgs84, raster_proj, x, y)
-    H_fls = ds_fls.interp(x=x_all, y=y_all, method='nearest')
-    H_err_fls = dr_fls.interp(x=x_all, y=y_all, method='nearest')
+    x_all, y_all = salem.gis.transform_proj(wgs84, raster_proj, lon, lat)
+    lon_xr = xr.DataArray(x_all, dims="z")
+    lat_xr = xr.DataArray(y_all, dims="z")
 
-    # Lets save lon and lat for an easier plotting
-    H_fls['lon'] = x
-    H_fls['lat'] = y
-    H_err_fls['lon'] = x
-    H_err_fls['lat'] = y
-    # And save the same data with new lat and lon dimensions
-    new_data = xr.DataArray(H_fls.data, dims=("lat", "lon"), coords={"lat": y, "lon": x})
-    new_error = xr.DataArray(H_err_fls.data, dims=("lat", "lon"), coords={"lat": y, "lon": x})
-    H_fls['h_new'] = new_data
-    H_err_fls['h_error'] = new_error
-    
-    # Drop nan and get the one value per flowline coordinate
-    h, x_coord, y_coord = dropnan_values_from_xarray(H_fls.h_new,
-                                                     namedim_x='lon',
-                                                     namedim_y='lat',
-                                                     get_xy=True)
+    H_fls = ds_fls.data.sel(x=lon_xr, y=lat_xr, method='nearest')
+    H_err_fls = dr_fls.data.sel(x=lon_xr, y=lat_xr, method='nearest')
 
-    error_h, x_coord, y_coord = dropnan_values_from_xarray(H_err_fls.h_error,
-                                                           namedim_x='lon',
-                                                           namedim_y='lat',
-                                                           get_xy=True)
+    print(len(H_fls))
+    print(len(H_err_fls))
 
-
-    return h, error_h, x_coord, y_coord
+    return H_fls.data, H_err_fls.data, lon, lat
 
 @utils.entity_task(log)
 def thick_data_to_gdir(gdir, ds=None, dr=None):
@@ -201,16 +187,13 @@ def thick_data_to_gdir(gdir, ds=None, dr=None):
     dr: Xarray.Dataframe with thickness error
     """
 
-    misc.write_flowlines_to_shape(gdir, path=gdir.dir)
-    shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
-    shp = gpd.read_file(shp_path)
 
-    ds_fls, dr_fls = crop_thick_data_to_flowline(ds, dr, shp)
+    ds_glacier, derr_glacier = crop_thick_data_to_glacier_grid(gdir, ds, dr)
 
 
     thick, err, lon, lat = calculate_observation_thickness(gdir,
-                                                           ds_fls,
-                                                           dr_fls)
+                                                           ds_glacier,
+                                                           derr_glacier)
 
     out = {"h": thick,
            "error": err,
