@@ -9,6 +9,7 @@ from affine import Affine
 from salem import wgs84
 import xarray as xr
 import geopandas as gpd
+from oggm import utils
 from oggm.utils._workflow import get_centerline_lonlat
 from k_tools import misc
 
