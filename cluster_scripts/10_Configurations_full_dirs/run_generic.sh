@@ -1,5 +1,5 @@
 #!/bin/bash
-export k_exp=k_measures
+export k_exp=k_racmo
 
 echo $k_exp
 
