@@ -9,7 +9,7 @@ from affine import Affine
 from salem import wgs84
 import xarray as xr
 import geopandas as gpd
-from oggm import utils
+from oggm.utils._workflow import get_centerline_lonlat
 from k_tools import misc
 
 # Module logger
@@ -153,8 +153,8 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     y_coord: list of latitudes
     """
 
-    coords = utils._workflow.get_centerline_lonlat(gdir,
-                                                   flowlines_output=True)[-1]['geometry'].coords
+    coords = get_centerline_lonlat(gdir,
+                                   flowlines_output=True)[-1]['geometry'].coords
 
 
     lon = coords.xy[0]
