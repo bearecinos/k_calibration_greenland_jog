@@ -7,19 +7,29 @@ import salem
 from configobj import ConfigObj
 from oggm import cfg, utils
 from oggm import workflow
-import warnings
+import glob
+import argparse
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+args = parser.parse_args()
+config_file = args.conf
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
+input_data_path = config['input_data_folder']
 sys.path.append(MAIN_PATH)
 
 from k_tools import misc
 
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
-
 # Reading glacier directories per experiment
 exp_dir_path = os.path.join(MAIN_PATH, config['volume_bsl_results'])
-config_paths = pd.read_csv(os.path.join(MAIN_PATH,
+config_paths = pd.read_csv(os.path.join(input_data_path,
                                         config['configuration_names']))
+
+# Reading thickness data form Millan et all 2022
+path_h = sorted(glob.glob(os.path.join(input_data_path, config['thickness_obs'])))
 
 full_config_paths = []
 for configuration in config_paths.config_path:
@@ -27,7 +37,7 @@ for configuration in config_paths.config_path:
                                           configuration + '/'))
 
 print(full_config_paths)
-
+exit()
 # Make output dir
 marcos_data = os.path.join(MAIN_PATH, 'output_data_marco')
 if not os.path.exists(marcos_data):
@@ -101,6 +111,8 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
     print('gdirs initialized')
 
     for gdir in gdirs:
+        h_obs_path = glob.glob(os.path.join(path_h, gdir.rgi_id+'*'))[0]
+        glacier_obs = pd.read_csv(h_obs_path)
 
         # Get inversion output
         inv_c = gdir.read_pickle('inversion_output')[-1]
@@ -116,15 +128,16 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
         board[-1:] = free_board
         flux[-1:] = calving_flux
 
-        d = {'thick_end_fls': inv_c['thick'][-5:],
-             'width_end_fls': inv_c['width'][-5:],
-             'is_rectangular': inv_c['is_rectangular'][-5:],
-             'slope': inv_c['slope_angle'][-5:],
-             'elevation [m]': surface[-5:],
+        d = {'thick_end_fls': inv_c['thick'],
+             'width_end_fls': inv_c['width'],
+             'is_rectangular': inv_c['is_rectangular'],
+             'slope': inv_c['slope_angle'],
+             'elevation [m]': surface,
              'calving_front_water_depth': depths,
              'calving_front_free_board': board,
              'calving_flux': flux}
 
         data_frame = pd.DataFrame(data=d)
+        data_frame_f = pd.concat([data_frame, glacier_obs], axis=1)
 
-        data_frame.to_csv(os.path.join(exp_dir_output, gdir.rgi_id + '.csv'))
+        data_frame_f.to_csv(os.path.join(exp_dir_output, gdir.rgi_id + '.csv'))
