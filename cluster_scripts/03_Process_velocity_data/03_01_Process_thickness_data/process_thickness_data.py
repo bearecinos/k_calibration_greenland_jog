@@ -174,7 +174,7 @@ log.info("OGGM preprocessing finished! Time needed: %02d:%02d:%02d" %
 path_h = sorted(glob.glob(os.path.join(input_data_path, config['h_file'])))
 path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file'])))
 
-for f, e in zip(path_h[4:6], path_h_e[4:6]):
+for f, e in zip(path_h[0:2], path_h_e[0:2]):
     file_name = os.path.basename(f)[0:-4]
     ds = utils_h.open_thick_raster(f)
     dr = utils_h.open_thick_raster(e)
@@ -194,12 +194,12 @@ for f, e in zip(path_h[4:6], path_h_e[4:6]):
         # in an easier format
         fpath = gdir.dir + '/thickness_data.pkl'
 
-        with open(fpath, 'rb') as handle:
-            g = pickle.load(handle)
-
-        if g['h'].size == 0:
+        if not os.path.isfile(fpath):
             log.info('probably this glacier is not in the thickness raster ' + gdir.rgi_id)
             continue
+
+        with open(fpath, 'rb') as handle:
+            g = pickle.load(handle)
 
         d = {'H_flowline': g['h'],
              'H_flowline_error': g['error'],

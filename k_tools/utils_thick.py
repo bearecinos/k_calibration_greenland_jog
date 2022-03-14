@@ -198,11 +198,15 @@ def thick_data_to_gdir(gdir, ds=None, dr=None):
                                                            ds_fls,
                                                            dr_fls)
 
-    out = {"h": thick,
-           "error": err,
-           "lon": lon,
-           "lat": lat}
+    if np.isnan(thick).all():
+        return {}
 
-    fp = os.path.join(gdir.dir, 'thickness_data' + '.pkl')
-    with open(fp, 'wb') as f:
-        pickle.dump(out, f, protocol=-1)
+    else:
+        out = {"h": thick,
+               "error": err,
+               "lon": lon,
+               "lat": lat}
+
+        fp = os.path.join(gdir.dir, 'thickness_data' + '.pkl')
+        with open(fp, 'wb') as f:
+            pickle.dump(out, f, protocol=-1)
