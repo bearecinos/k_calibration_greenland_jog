@@ -10,7 +10,6 @@ from salem import wgs84
 import xarray as xr
 import geopandas as gpd
 from oggm import utils
-from oggm.utils._workflow import get_centerline_lonlat
 from k_tools import misc
 
 # Module logger
@@ -154,9 +153,8 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     y_coord: list of latitudes
     """
 
-    coords = get_centerline_lonlat(gdir,
+    coords = utils.get_centerline_lonlat(gdir,
                                    flowlines_output=True)[-1]['geometry'].coords
-
 
     lon = coords.xy[0]
     lat = coords.xy[1]
@@ -167,8 +165,11 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     lon_xr = xr.DataArray(x_all, dims="z")
     lat_xr = xr.DataArray(y_all, dims="z")
 
-    H_fls = ds_fls.data.sel(x=lon_xr, y=lat_xr, method='nearest')
-    H_err_fls = dr_fls.data.sel(x=lon_xr, y=lat_xr, method='nearest')
+    H_fls = ds_fls.data.interp(x=lon_xr, y=lat_xr, method='nearest')
+    H_err_fls = dr_fls.data.interp(x=lon_xr, y=lat_xr, method='nearest')
+
+    assert len(lon) == len(H_fls)
+    assert len(lat) == len(H_err_fls)
 
     return H_fls.data, H_err_fls.data, lon, lat
 
@@ -185,13 +186,16 @@ def thick_data_to_gdir(gdir, ds=None, dr=None):
     dr: Xarray.Dataframe with thickness error
     """
 
+    # This is faster if we crop to the flowline shape file
+    misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+    shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+    shp = gpd.read_file(shp_path)
 
-    ds_glacier, derr_glacier = crop_thick_data_to_glacier_grid(gdir, ds, dr)
-
+    ds_fls, dr_fls = crop_thick_data_to_flowline(ds, dr, shp)
 
     thick, err, lon, lat = calculate_observation_thickness(gdir,
-                                                           ds_glacier,
-                                                           derr_glacier)
+                                                           ds_fls,
+                                                           dr_fls)
 
     out = {"h": thick,
            "error": err,
