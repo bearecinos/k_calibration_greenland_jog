@@ -176,6 +176,11 @@ path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file']
 
 for f, e in zip(path_h[0:2], path_h_e[0:2]):
     file_name = os.path.basename(f)[0:-4]
+
+    path_to_output = cfg.PATHS['working_dir']+'/'+ file_name
+    if not os.path.exists(path_to_output):
+        os.makedirs(path_to_output)
+
     ds = utils_h.open_thick_raster(f)
     dr = utils_h.open_thick_raster(e)
 
@@ -207,7 +212,7 @@ for f, e in zip(path_h[0:2], path_h_e[0:2]):
              'lat': g['lat']
              }
         data_frame = pd.DataFrame(data=d)
-        data_frame.to_csv(os.path.join(cfg.PATHS['working_dir'], gdir.rgi_id + '.csv'))
+        data_frame.to_csv(os.path.join(path_to_output, gdir.rgi_id + '.csv'))
 
         rgi_ids = np.append(rgi_ids, gdir.rgi_id)
         thick_end = np.append(thick_end, g['h'][-1])
@@ -221,6 +226,6 @@ for f, e in zip(path_h[0:2], path_h_e[0:2]):
          }
 
     df_r = pd.DataFrame(data=dr)
-    df_r.to_csv(cfg.PATHS['working_dir'] + '/thickness_observations_'+ file_name +'.csv')
+    df_r.to_csv(os.path.join(path_to_output,'thickness_observations_'+ file_name +'.csv'))
 #
 # misc.reset_per_glacier_working_dir()
