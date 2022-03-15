@@ -6,7 +6,7 @@ mkdir -p "$OUTDIR"
 
 echo $OUTDIR
 
-python ./process_thickness_data.py -conf "/scratch/local/brecinos/k_calibration_greenland_jog/config.ini"
+python ./process_thickness_data_merge_raster.py -conf "/scratch/local/brecinos/k_calibration_greenland_jog/config.ini"
 
 # Print a final message so you can actually see it being done in the output log.
 echo "RUN DONE"
