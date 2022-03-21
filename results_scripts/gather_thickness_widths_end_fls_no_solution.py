@@ -53,6 +53,16 @@ RGI_FILE = os.path.join(input_data_path, config['RGI_FILE'])
 rgidf = gpd.read_file(RGI_FILE)
 rgidf.crs = salem.wgs84.srs
 
+
+# Get glaciers that belong to the ice cap.
+rgidf_ice_cap = rgidf[rgidf['RGIId'].str.match('RGI60-05.10315')]
+# Get the id's for filter
+ice_cap_ids = rgidf_ice_cap.RGIId.values
+
+# Removing the Ice cap
+keep_indexes = [(i not in ice_cap_ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_indexes]
+
 # Select only Marine-terminating
 glac_type = ['0']
 keep_glactype = [(i not in glac_type) for i in rgidf.TermType]
@@ -97,25 +107,25 @@ for gdir in gdirs:
     # Get inversion output
     inv_c = gdir.read_pickle('inversion_output')[-1]
     surface = gdir.read_pickle('inversion_flowlines')[-1].surface_h
-    diags = gdir.get_diagnostics()
-    water_depth = diags['calving_front_water_depth']
-    free_board = diags['calving_front_free_board']
-    calving_flux = diags['calving_flux']
-    depths = np.zeros(len(inv_c['thick']))
-    board = np.zeros(len(inv_c['thick']))
-    flux = np.zeros(len(inv_c['thick']))
-    depths[-1:] = water_depth
-    board[-1:] = free_board
-    flux[-1:] = calving_flux
+    #diags = gdir.get_diagnostics()
+    #water_depth = diags['calving_front_water_depth']
+    #free_board = diags['calving_front_free_board']
+    #calving_flux = diags['calving_flux']
+    #depths = np.zeros(len(inv_c['thick']))
+    #board = np.zeros(len(inv_c['thick']))
+    #flux = np.zeros(len(inv_c['thick']))
+    #depths[-1:] = water_depth
+    #board[-1:] = free_board
+    #flux[-1:] = calving_flux
 
     d = {'thick_end_fls': inv_c['thick'],
          'width_end_fls': inv_c['width'],
          'is_rectangular': inv_c['is_rectangular'],
          'slope': inv_c['slope_angle'],
-         'elevation [m]': surface,
-         'calving_front_water_depth': depths,
-         'calving_front_free_board': board,
-         'calving_flux': flux}
+         'elevation [m]': surface}
+         #'calving_front_water_depth': depths,
+         #'calving_front_free_board': board,
+         #'calving_flux': flux}
 
     data_frame = pd.DataFrame(data=d)
 
