@@ -1,6 +1,7 @@
 import os
 import logging
 import numpy as np
+import pandas as pd
 import rasterio
 import salem
 import pickle
@@ -166,8 +167,8 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     lon_xr = xr.DataArray(x_all, dims="z")
     lat_xr = xr.DataArray(y_all, dims="z")
 
-    H_fls = ds_fls.data.interp(x=lon_xr, y=lat_xr, method='nearest')
-    H_err_fls = dr_fls.data.interp(x=lon_xr, y=lat_xr, method='nearest')
+    H_fls = ds_fls.interp(x=lon_xr, y=lat_xr, method='nearest')
+    H_err_fls = dr_fls.interp(x=lon_xr, y=lat_xr, method='nearest')
 
     assert len(lon) == len(H_fls)
     assert len(lat) == len(H_err_fls)
@@ -210,3 +211,96 @@ def thick_data_to_gdir(gdir, ds=None, dr=None):
         fp = os.path.join(gdir.dir, 'thickness_data' + '.pkl')
         with open(fp, 'wb') as f:
             pickle.dump(out, f, protocol=-1)
+
+@utils.entity_task(log, writes=['gridded_data'])
+def millan_data_to_gdir(gdir, ds=None, dr=None):
+    """
+    Project Millan et al. 2022 thickness rasters
+    to the glacier grid and store under
+    griddata.nc oggm file
+
+    gdir: Glacier directory
+    ds: tif file with thickness data
+    dr: tif file with thickness error
+    """
+
+    # OGGM should download the right tiff here
+    dh = salem.GeoTiff(ds)
+    dh_r = salem.GeoTiff(dr)
+
+    grid_gla = gdir.grid.center_grid
+    proj_h = dh.grid.proj
+
+    x0, x1, y0, y1 = grid_gla.extent_in_crs(proj_h)
+
+    try:
+        dh.set_subset(corners=((x0, y0), (x1, y1)), crs=proj_h, margin=4)
+        dh_r.set_subset(corners=((x0, y0), (x1, y1)), crs=proj_h, margin=4)
+    except RuntimeError:
+        log.info("There is no data for this glacier")
+        return {}
+
+    grid_h = dh.grid.center_grid
+
+    # Get dat for each raster file
+    h = utils.clip_min(dh.get_vardata(), 0)
+    h_err = utils.clip_min(dh_r.get_vardata(), 0)
+
+    h_new = gdir.grid.map_gridded_data(h, grid_h, interp='linear')
+    h_err_new = gdir.grid.map_gridded_data(h_err, grid_h, interp='linear')
+
+    h_new = utils.clip_min(h_new.filled(0), 0)
+    h_err_new = utils.clip_min(h_err_new.filled(0), 0)
+
+    # We mask zero ice as nodata as in bedtopo.py#L56
+    h_new = np.where(h_new == 0, np.NaN, h_new)
+    h_err_new = np.where(h_err_new == 0, np.NaN, h_err_new)
+
+    #Base url below should come from oggm downloads...
+
+    with utils.ncDataset(gdir.get_filepath('gridded_data'), 'a') as nc:
+        vn = 'millan_ice_thickness'
+        if vn in nc.variables:
+            v = nc.variables[vn]
+        else:
+            v = nc.createVariable(vn, 'f4', ('y', 'x',), zlib=True)
+        v.units = 'm'
+        ln = 'Ice thickness from Millan, et al. 2022'
+        v.long_name = ln
+        v.base_url = 'https://www.sedoo.fr/theia-publication-products/?uuid=55acbdd5-3982-4eac-89b2-46703557938c'
+        v[:] = h_new
+
+        vn = 'millan_ice_thickness_error'
+        if vn in nc.variables:
+            v = nc.variables[vn]
+        else:
+            v = nc.createVariable(vn, 'f4', ('y', 'x',), zlib=True)
+        v.units = 'm'
+        ln = 'Ice thickness error from Millan, et al. 2022'
+        v.long_name = ln
+        v.base_url = 'https://www.sedoo.fr/theia-publication-products/?uuid=55acbdd5-3982-4eac-89b2-46703557938c'
+        v[:] = h_err_new
+
+
+def combined_model_thickness_and_observations(file_path):
+    """
+    Reads a csv containing model and observations thickness
+    averages the thickness and uncertainty in the last five
+    pixels of the flowline
+    """
+
+    base = os.path.basename(file_path)
+    rgi_id = os.path.splitext(base)[0]
+
+
+    df = pd.read_csv(file_path, index_col=0)
+
+    thick_oggm = np.round(np.nanmean(df['thick_end_fls'].iloc[-5:]), decimals = 4)
+
+    try:
+        thick_obs = np.round(np.nanmean(df['H_flowline'].iloc[-5:]), decimals = 4)
+        error_obs = np.round(np.nanmean(df['H_flowline_error'].iloc[-5:]), decimals = 4)
+        return rgi_id, thick_oggm, thick_obs, error_obs
+    except KeyError as e:
+        print('There is no data for glacier ', rgi_id)
+        return {}

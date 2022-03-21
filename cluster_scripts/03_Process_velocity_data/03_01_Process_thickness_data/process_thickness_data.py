@@ -14,6 +14,7 @@ import pandas as pd
 from configobj import ConfigObj
 import time
 import salem
+import xarray as xr
 import argparse
 import pickle
 
@@ -174,49 +175,57 @@ log.info("OGGM preprocessing finished! Time needed: %02d:%02d:%02d" %
 path_h = sorted(glob.glob(os.path.join(input_data_path, config['h_file'])))
 path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file'])))
 
-for f, e in zip(path_h[0:2], path_h_e[0:2]):
+for f, e in zip(path_h, path_h_e):
     file_name = os.path.basename(f)[0:-4]
 
     path_to_output = cfg.PATHS['working_dir']+'/'+ file_name
     if not os.path.exists(path_to_output):
         os.makedirs(path_to_output)
 
-    ds = utils_h.open_thick_raster(f)
-    dr = utils_h.open_thick_raster(e)
-
     data_frame = []
     rgi_ids = []
     thick_end = []
     error_end = []
 
-    workflow.execute_entity_task(utils_h.thick_data_to_gdir,
+    workflow.execute_entity_task(utils_h.millan_data_to_gdir,
                                  gdirs,
-                                 ds=ds,
-                                 dr=dr)
+                                 ds=f,
+                                 dr=e)
 
     for gdir in gdirs:
-        #Now for each glacier we read the thickness data info and then store it
-        # in an easier format
-        fpath = gdir.dir + '/thickness_data.pkl'
 
-        if not os.path.isfile(fpath):
-            log.info('probably this glacier is not in the thickness raster ' + gdir.rgi_id)
+        with xr.open_dataset(gdir.get_filepath('gridded_data')) as ds:
+            ds = ds.load()
+
+        try:
+            ds.millan_ice_thickness.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+            ds.millan_ice_thickness_error.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+        except AttributeError:
+            log.info("There is no data for this glacier in this raster")
             continue
 
-        with open(fpath, 'rb') as handle:
-            g = pickle.load(handle)
+        misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+        shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+        shp = gpd.read_file(shp_path)
 
-        d = {'H_flowline': g['h'],
-             'H_flowline_error': g['error'],
-             'lon': g['lon'],
-             'lat': g['lat']
+        ds_fls, dr_fls = utils_h.crop_thick_data_to_flowline(ds.millan_ice_thickness,
+                                                             ds.millan_ice_thickness_error,
+                                                             shp)
+
+        H_fls, H_err_fls, lon, lat = utils_h.calculate_observation_thickness(gdir, ds_fls, dr_fls)
+
+
+        d = {'H_flowline': H_fls,
+             'H_flowline_error': H_err_fls,
+             'lon': lon,
+             'lat': lat
              }
         data_frame = pd.DataFrame(data=d)
         data_frame.to_csv(os.path.join(path_to_output, gdir.rgi_id + '.csv'))
 
         rgi_ids = np.append(rgi_ids, gdir.rgi_id)
-        thick_end = np.append(thick_end, g['h'][-1])
-        error_end = np.append(error_end, g['error'][-1])
+        thick_end = np.append(thick_end, H_fls[-1])
+        error_end = np.append(error_end, H_err_fls[-1])
 
     log.info('processing of thickness over for this raster file: ' + file_name)
 
