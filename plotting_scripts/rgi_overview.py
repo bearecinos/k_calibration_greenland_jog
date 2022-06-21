@@ -12,13 +12,18 @@ from matplotlib.offsetbox import AnchoredText
 from matplotlib import rcParams
 import matplotlib.gridspec as gridspec
 import sys
+import argparse
 
-Old_main_path = os.path.expanduser('~/k_calibration_greenland/')
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+args = parser.parse_args()
+config_file = args.conf
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
+input_data_path = config['input_data_folder']
 sys.path.append(MAIN_PATH)
-
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
-old_config = ConfigObj(os.path.join(Old_main_path, 'config.ini'))
 
 # velocity module
 from k_tools import misc
@@ -36,17 +41,17 @@ if not os.path.exists(plot_path):
 
 # Reading RACMO mask
 # The mask and geo reference data
-ds_geo = xr.open_dataset(os.path.join(Old_main_path,
-                                      old_config['mask_topo']),
+ds_geo = xr.open_dataset(os.path.join(input_data_path,
+                                      config['mask_topo']),
                          decode_times=False)
 proj = pyproj.Proj('+init=EPSG:3413')
 ds_geo.attrs['pyproj_srs'] = proj.srs
 # Getting hi-resolution coastline
-coast_line = salem.read_shapefile(os.path.join(Old_main_path,
-                                               old_config['coastline']))
+coast_line = salem.read_shapefile(os.path.join(input_data_path,
+                                  config['coastline']))
 
 # RGI file
-rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
+rgidf = gpd.read_file(os.path.join(input_data_path, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
 
 rgidf = rgidf.sort_values('RGIId', ascending=True)
@@ -130,7 +135,7 @@ rgidf_study_area = pd.concat([sub_no_conect, ice_cap_land_terminating],
                              ignore_index=True)
 
 # Analyse errors and data gaps
-prepro_errors = pd.read_csv(os.path.join(MAIN_PATH,
+prepro_errors = pd.read_csv(os.path.join(input_data_path,
                                       config['prepro_err']))
 area_prepro = prepro_errors.Area.sum()
 

@@ -136,6 +136,8 @@ ax0.errorbar(df_live.H_obs.values, df_live.H_model_k_itslive_value.values, xerr=
              ecolor=sns.xkcd_rgb["dark grey"],
              elinewidth=2.5)
 ax0.plot([0, 800], [0, 800], c='grey', alpha=0.1)
+ax0.set_xlim(-10, 800)
+ax0.set_ylim(-10, 800)
 ax0.set_xlabel('Thickness [m] \n (Millan, et al. 2022)')
 ax0.set_ylabel('Thickness [m] \n OGGM-ITSLIVE')
 test0 = AnchoredText('$r$ = '+ str(format(r_pearson_k_IvO, ".2f")) + '\n' +
@@ -152,6 +154,8 @@ ax1.errorbar(df_measures.H_obs.values, df_measures.H_model_k_measures_value.valu
              ecolor=sns.xkcd_rgb["dark grey"],
              elinewidth=2.5)
 ax1.plot([0, 800], [0, 800], c='grey', alpha=0.1)
+ax1.set_xlim(-10, 800)
+ax1.set_ylim(-10, 800)
 ax1.set_xlabel('Thickness [m] \n (Millan, et al. 2022)')
 ax1.set_ylabel('Thickness [m] \n OGGM-MEaSUREs')
 test1 = AnchoredText('$r$ = '+ str(format(r_pearson_k_MvO, ".2f")) + '\n' +
@@ -169,6 +173,8 @@ ax2.errorbar(df_racmo.H_obs.values, df_racmo.H_model_k_racmo_value.values, xerr=
              ecolor=sns.xkcd_rgb["dark grey"],
              elinewidth=2.5)
 ax2.plot([0, 800], [0, 800], c='grey', alpha=0.1)
+ax2.set_xlim(-10, 800)
+ax2.set_ylim(-10, 800)
 ax2.set_xlabel('Thickness [m] \n (Millan, et al. 2022)')
 ax2.set_ylabel('Thickness [m] \n OGGM-RACMO')
 test2 = AnchoredText('$r$ = '+ str(format(r_pearson_k_RvO, ".2f")) + '\n' +
