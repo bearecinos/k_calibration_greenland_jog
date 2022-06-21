@@ -128,6 +128,15 @@ rgidf_gimp = rgidf.iloc[keep_gimp]
 
 rgidf = rgidf.iloc[keep_indexes_no_gimp]
 
+# Keep only glaciers with no solution to calving
+output_path = os.path.join(MAIN_PATH, config['vel_calibration_results_measures'])
+no_solution = os.path.join(output_path, 'glaciers_with_no_solution.csv')
+d_no_sol = pd.read_csv(no_solution)
+ids_rgi = d_no_sol.RGIId.values
+keep_no_solution = [(i in ids_rgi) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_no_solution]
+
+
 # Sort for more efficient parallel computing
 rgidf = rgidf.sort_values('Area', ascending=False)
 
@@ -238,4 +247,4 @@ filesuffix_c = '_greenland_calving_with_sliding'
 df_stats_c.to_csv(os.path.join(cfg.PATHS['working_dir'],
                                ('glacier_statistics' + filesuffix_c + '.csv')))
 
-misc.reset_per_glacier_working_dir()
+#misc.reset_per_glacier_working_dir()

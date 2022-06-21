@@ -175,7 +175,7 @@ log.info("OGGM preprocessing finished! Time needed: %02d:%02d:%02d" %
 path_h = sorted(glob.glob(os.path.join(input_data_path, config['h_file'])))
 path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file'])))
 
-for f, e in zip(path_h, path_h_e):
+for f, e in zip(path_h[6:7], path_h_e[6:7]):
     file_name = os.path.basename(f)[0:-4]
 
     path_to_output = cfg.PATHS['working_dir']+'/'+ file_name

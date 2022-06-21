@@ -24,10 +24,14 @@ sys.path.append(MAIN_PATH)
 from k_tools import misc
 
 # Reading glacier directory from prepro
-exp_dir_path = os.path.join(MAIN_PATH, 'output_data/01_Greenland_prepo')
+exp_dir_path = os.path.join(MAIN_PATH, 'output_data/13_Glaciers_no_solution')
 
 # Reading thickness data form Millan et all 2022
 path_h = os.path.join(MAIN_PATH, config['thickness_obs'])
+
+#Read freeboard and width from glacier stats
+path_stats = os.path.join(exp_dir_path, 'glacier_statistics_greenland_calving_with_sliding.csv')
+df_stats = pd.read_csv(path_stats)
 
 # Make output dir
 marcos_data = os.path.join(MAIN_PATH, 'output_data_marco')
@@ -96,36 +100,31 @@ cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
-
+cfg.PARAMS['use_kcalving_for_inversion'] = True
+cfg.PARAMS['use_kcalving_for_ru'] = True
 
 # gdirs = workflow.init_glacier_regions(rgidf, reset=False)
 gdirs = workflow.init_glacier_directories(rgidf.RGIId.values, reset=False)
 print('gdirs initialized')
 
 for gdir in gdirs:
-
+   
+    index_stats = df_stats.index[df_stats['rgi_id'] == gdir.rgi_id].tolist()
+    data_oggm = df_stats.iloc[index_stats]
+    
     # Get inversion output
     inv_c = gdir.read_pickle('inversion_output')[-1]
     surface = gdir.read_pickle('inversion_flowlines')[-1].surface_h
-    #diags = gdir.get_diagnostics()
-    #water_depth = diags['calving_front_water_depth']
-    #free_board = diags['calving_front_free_board']
-    #calving_flux = diags['calving_flux']
-    #depths = np.zeros(len(inv_c['thick']))
-    #board = np.zeros(len(inv_c['thick']))
-    #flux = np.zeros(len(inv_c['thick']))
-    #depths[-1:] = water_depth
-    #board[-1:] = free_board
-    #flux[-1:] = calving_flux
+    free_board = data_oggm['calving_front_free_board'].values
+    board = np.zeros(len(inv_c['thick']))
+    board[-1:] = free_board
 
     d = {'thick_end_fls': inv_c['thick'],
          'width_end_fls': inv_c['width'],
          'is_rectangular': inv_c['is_rectangular'],
          'slope': inv_c['slope_angle'],
-         'elevation [m]': surface}
-         #'calving_front_water_depth': depths,
-         #'calving_front_free_board': board,
-         #'calving_flux': flux}
+         'elevation [m]': surface,
+         'calving_front_free_board': board}
 
     data_frame = pd.DataFrame(data=d)
 
@@ -133,5 +132,5 @@ for gdir in gdirs:
     if os.path.exists(h_obs_path):
         glacier_obs = pd.read_csv(h_obs_path)
         data_frame = pd.concat([data_frame, glacier_obs], axis=1)
-
+    print(exp_dir_output)
     data_frame.to_csv(os.path.join(exp_dir_output, gdir.rgi_id + '.csv'))
