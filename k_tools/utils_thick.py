@@ -213,7 +213,7 @@ def thick_data_to_gdir(gdir, ds=None, dr=None):
             pickle.dump(out, f, protocol=-1)
 
 @utils.entity_task(log, writes=['gridded_data'])
-def millan_data_to_gdir(gdir, ds=None, dr=None):
+def millan_data_to_gdir(gdir, ds=None, dr=None, plot_dir=None):
     """
     Project Millan et al. 2022 thickness rasters
     to the glacier grid and store under
@@ -236,6 +236,12 @@ def millan_data_to_gdir(gdir, ds=None, dr=None):
     try:
         dh.set_subset(corners=((x0, y0), (x1, y1)), crs=proj_h, margin=4)
         dh_r.set_subset(corners=((x0, y0), (x1, y1)), crs=proj_h, margin=4)
+        import matplotlib.pyplot as plt
+        plt.imshow(dh.get_vardata())
+        cbar = plt.colorbar()
+        cbar.set_label('thickness [m]')
+        plt.savefig(os.path.join(plot_dir,gdir.rgi_id + '.png'))
+        plt.clf()
     except RuntimeError:
         log.info("There is no data for this glacier")
         return {}

@@ -115,6 +115,14 @@ connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
+# Keep only problematic glacier from marcos list
+path_to_problematic = os.path.join(input_data_path,
+                                   'millan_problematic/class2_ids.txt')
+dl = pd.read_csv(path_to_problematic)
+ids_l = dl.rgi_id.values
+keep_problem = [(i in ids_l) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_problem]
+
 # Exclude glaciers with prepro-erros
 de = pd.read_csv(os.path.join(input_data_path, config['prepro_err']))
 ids = de.RGIId.values
@@ -175,7 +183,7 @@ log.info("OGGM preprocessing finished! Time needed: %02d:%02d:%02d" %
 path_h = sorted(glob.glob(os.path.join(input_data_path, config['h_file'])))
 path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file'])))
 
-for f, e in zip(path_h[6:7], path_h_e[6:7]):
+for f, e in zip(path_h[0:2], path_h_e[0:2]):
     file_name = os.path.basename(f)[0:-4]
 
     path_to_output = cfg.PATHS['working_dir']+'/'+ file_name
@@ -190,7 +198,8 @@ for f, e in zip(path_h[6:7], path_h_e[6:7]):
     workflow.execute_entity_task(utils_h.millan_data_to_gdir,
                                  gdirs,
                                  ds=f,
-                                 dr=e)
+                                 dr=e,
+                                 plot_dir=path_to_output)
 
     for gdir in gdirs:
 
