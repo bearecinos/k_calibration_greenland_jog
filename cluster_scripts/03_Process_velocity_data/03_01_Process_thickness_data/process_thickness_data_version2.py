@@ -170,13 +170,16 @@ path_h = sorted(glob.glob(os.path.join(input_data_path, config['h_file'])))
 path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file'])))
 
 for f, e in zip(path_h[0:2], path_h_e[0:2]):
+    df_r = pd.DataFrame()
+    file_name = ''
+
     file_name = os.path.basename(f)[0:-4]
 
     path_to_output = cfg.PATHS['working_dir']+'/'+ file_name
     if not os.path.exists(path_to_output):
         os.makedirs(path_to_output)
 
-    data_frame = []
+    data_frame = pd.DataFrame()
     rgi_ids = []
     thick_end = []
     error_end = []
