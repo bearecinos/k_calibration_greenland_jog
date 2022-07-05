@@ -125,7 +125,7 @@ rgidf = rgidf.iloc[keep_connection]
 
 # Keep only problematic glacier from marcos list
 path_to_problematic = os.path.join(input_data_path,
-                                   'millan_problematic/class3_ids.txt')
+                                   'millan_problematic/class4_ids.txt')
 dl = pd.read_csv(path_to_problematic)
 ids_l = dl.rgi_id.values
 keep_problem = [(i in ids_l) for i in rgidf.RGIId]
