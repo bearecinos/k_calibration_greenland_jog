@@ -220,90 +220,104 @@ def millan_data_to_gdir(gdir, ds=None, dr=None, plot_dir=None):
     griddata.nc oggm file
 
     gdir: Glacier directory
-    ds: tif file with thickness data
-    dr: tif file with thickness error
+    ds: path to the tif file with thickness data
+    dr: path to tif file with thickness error
     """
 
     # OGGM should download the right tiff here
-    dh = salem.GeoTiff(ds)
-    dh_r = salem.GeoTiff(dr)
+    sh = salem.GeoTiff(ds)
+    sh_r = salem.GeoTiff(dr)
+
+    dh = open_thick_raster(ds)  # -2
+    dh_r = open_thick_raster(dr)
 
     grid_gla = gdir.grid.center_grid
-    proj_h = dh.grid.proj
+    proj_h = dh.pyproj_srs
 
     x0, x1, y0, y1 = grid_gla.extent_in_crs(proj_h)
 
-    try:
-        dh.set_subset(corners=((x0, y0), (x1, y1)), crs=proj_h, margin=4)
-        dh_r.set_subset(corners=((x0, y0), (x1, y1)), crs=proj_h, margin=4)
-    except RuntimeError:
+    glacier_box = {'xmin': x0,
+                   'xmax': x1,
+                   'ymin': y0,
+                   'ymax': y1}
+
+    x_coords = dh.x.data
+    y_coords = dh.y.data
+
+    x_inds = np.where((x_coords >= glacier_box["xmin"]) & (x_coords <= glacier_box["xmax"]))[0]
+    y_inds = np.where((y_coords >= glacier_box["ymin"]) & (y_coords <= glacier_box["ymax"]))[0]
+
+    dh_sel = dh.isel(x=x_inds, y=y_inds)
+    dh_r_sel = dh_r.isel(x=x_inds, y=y_inds)
+
+    if dh_sel.data.shape == (0,0):
         log.info("There is no data for this glacier")
         return {}
+    else:
+        grid_h = sh.grid.center_grid
 
-    grid_h = dh.grid.center_grid
+        # Get dat for each raster file
+        h = utils.clip_min(dh_sel.data, 0)
+        h_err = utils.clip_min(dh_r_sel.data, 0)
 
-    # Get dat for each raster file
-    h = utils.clip_min(dh.get_vardata(), 0)
-    h_err = utils.clip_min(dh_r.get_vardata(), 0)
+        h_new = gdir.grid.map_gridded_data(h, grid=None, interp='linear')
+        h_err_new = gdir.grid.map_gridded_data(h_err, grid=None, interp='linear')
 
-    h_new = gdir.grid.map_gridded_data(h, grid_h, interp='linear')
-    h_err_new = gdir.grid.map_gridded_data(h_err, grid_h, interp='linear')
+        h_new = utils.clip_min(h_new.filled(0), 0)
+        h_err_new = utils.clip_min(h_err_new.filled(0), 0)
 
-    h_new = utils.clip_min(h_new.filled(0), 0)
-    h_err_new = utils.clip_min(h_err_new.filled(0), 0)
-
-    # We mask zero ice as nodata as in bedtopo.py#L56
-    h_new = np.where(h_new == 0, np.NaN, h_new)
-    h_err_new = np.where(h_err_new == 0, np.NaN, h_err_new)
+        # We mask zero ice as nodata as in bedtopo.py#L56
+        h_new = np.where(h_new == 0, np.NaN, h_new)
+        h_err_new = np.where(h_err_new == 0, np.NaN, h_err_new)
 
     #Base url below should come from oggm downloads...
 
-    with utils.ncDataset(gdir.get_filepath('gridded_data'), 'a') as nc:
-        vn = 'millan_ice_thickness'
-        if vn in nc.variables:
-            v = nc.variables[vn]
-        else:
-            v = nc.createVariable(vn, 'f4', ('y', 'x',), zlib=True)
-        v.units = 'm'
-        ln = 'Ice thickness from Millan, et al. 2022'
-        v.long_name = ln
-        v.base_url = 'https://www.sedoo.fr/theia-publication-products/?uuid=55acbdd5-3982-4eac-89b2-46703557938c'
-        v[:] = h_new
+        with utils.ncDataset(gdir.get_filepath('gridded_data'), 'a') as nc:
+            vn = 'millan_ice_thickness'
+            if vn in nc.variables:
+                v = nc.variables[vn]
+            else:
+                v = nc.createVariable(vn, 'f4', ('y', 'x',), zlib=True)
+            v.units = 'm'
+            ln = 'Ice thickness from Millan, et al. 2022'
+            v.long_name = ln
+            v.base_url = 'https://www.sedoo.fr/theia-publication-products/?uuid=55acbdd5-3982-4eac-89b2-46703557938c'
+            v[:] = h_new
 
-        vn = 'millan_ice_thickness_error'
-        if vn in nc.variables:
-            v = nc.variables[vn]
-        else:
-            v = nc.createVariable(vn, 'f4', ('y', 'x',), zlib=True)
-        v.units = 'm'
-        ln = 'Ice thickness error from Millan, et al. 2022'
-        v.long_name = ln
-        v.base_url = 'https://www.sedoo.fr/theia-publication-products/?uuid=55acbdd5-3982-4eac-89b2-46703557938c'
-        v[:] = h_err_new
+            vn = 'millan_ice_thickness_error'
+            if vn in nc.variables:
+                v = nc.variables[vn]
+            else:
+                v = nc.createVariable(vn, 'f4', ('y', 'x',), zlib=True)
+            v.units = 'm'
+            ln = 'Ice thickness error from Millan, et al. 2022'
+            v.long_name = ln
+            v.base_url = 'https://www.sedoo.fr/theia-publication-products/?uuid=55acbdd5-3982-4eac-89b2-46703557938c'
+            v[:] = h_err_new
 
-    misc.write_flowlines_to_shape(gdir, path=gdir.dir)
-    shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
-    shp = gpd.read_file(shp_path)
+        misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+        shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+        shp = gpd.read_file(shp_path)
 
-    with xr.open_dataset(gdir.get_filepath('gridded_data')) as ds:
-        ds = ds.load()
-    ds.millan_ice_thickness.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
-    ds.millan_ice_thickness_error.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+        with xr.open_dataset(gdir.get_filepath('gridded_data')) as ds:
+            ds = ds.load()
+        ds.millan_ice_thickness.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+        ds.millan_ice_thickness_error.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
 
-    import matplotlib.pyplot as plt
-    cmap_thick = plt.cm.get_cmap('YlGnBu')
+        import matplotlib.pyplot as plt
+        cmap_thick = plt.cm.get_cmap('YlGnBu')
 
-    fig, ax = plt.subplots()
-    mp = ds.salem.get_map();
-    mp.set_shapefile(gdir.read_shapefile('outlines'))
-    mp.set_shapefile(shp, color='r')
-    mp.set_data(ds.millan_ice_thickness)
-    mp.set_cmap(cmap_thick)
-    mp.set_levels(np.arange(0, 500, 10))
-    mp.set_extend('both')
-    mp.visualize(ax=ax, cbar_title='thickness m');
-    plt.savefig(os.path.join(plot_dir, gdir.rgi_id + '.png'))
-    plt.clf()
+        fig, ax = plt.subplots()
+        mp = ds.salem.get_map();
+        mp.set_shapefile(gdir.read_shapefile('outlines'))
+        mp.set_shapefile(shp, color='r')
+        mp.set_data(ds.millan_ice_thickness)
+        mp.set_cmap(cmap_thick)
+        mp.set_levels(np.arange(0, 500, 10))
+        mp.set_extend('both')
+        mp.visualize(ax=ax, cbar_title='thickness m');
+        plt.savefig(os.path.join(plot_dir, gdir.rgi_id + '.png'))
+        plt.clf()
 
 
 def combined_model_thickness_and_observations(file_path):

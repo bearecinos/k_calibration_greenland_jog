@@ -181,41 +181,46 @@ for f, e in zip(path_h[0:2], path_h_e[0:2]):
     thick_end = []
     error_end = []
 
-    ds = utils_h.open_thick_raster(f)
-    dr = utils_h.open_thick_raster(e)
-
-    workflow.execute_entity_task(utils_h.thick_data_to_gdir,
-                                 ds=ds,
-                                 dr=dr)
+    workflow.execute_entity_task(utils_h.millan_data_to_gdir,
+                                 gdirs,
+                                 ds=f,
+                                 dr=e,
+                                 plot_dir=path_to_output)
 
     for gdir in gdirs:
 
-        fpath = gdir.dir + '/thickness_data.pkl'
-        if os.path.exists(fpath):
-            with open(fpath, 'rb') as handle:
-                g = pickle.load(handle)
+        with xr.open_dataset(gdir.get_filepath('gridded_data')) as ds:
+            ds = ds.load()
 
-                thick = g['h']
-                error = g['error']
+        try:
+            ds.millan_ice_thickness.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+            ds.millan_ice_thickness_error.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+        except AttributeError:
+            log.info("There is no data for this glacier in this raster")
+            continue
 
-                lat = g['lat']
-                lon = g['lon']
+        misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+        shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+        shp = gpd.read_file(shp_path)
 
-                if len(thick) > 0:
-                    d = {'H_flowline': thick,
-                         'H_flowline_error': error,
-                         'lon': lon,
-                         'lat': lat
-                         }
-                    data_frame = pd.DataFrame(data=d)
-                    data_frame.to_csv(os.path.join(path_to_output, gdir.rgi_id + '.csv'))
+        ds_fls, dr_fls = utils_h.crop_thick_data_to_flowline(ds.millan_ice_thickness,
+                                                             ds.millan_ice_thickness_error,
+                                                             shp)
+
+        H_fls, H_err_fls, lon, lat = utils_h.calculate_observation_thickness(gdir, ds_fls, dr_fls)
 
 
-                    rgi_ids = np.append(rgi_ids, gdir.rgi_id)
-                    thick_end = np.append(thick_end, thick[-1])
-                    error_end = np.append(error_end, error[-1])
-                else:
-                    continue
+        d = {'H_flowline': H_fls,
+             'H_flowline_error': H_err_fls,
+             'lon': lon,
+             'lat': lat
+             }
+        data_frame = pd.DataFrame(data=d)
+        data_frame.to_csv(os.path.join(path_to_output, gdir.rgi_id + '.csv'))
+
+        rgi_ids = np.append(rgi_ids, gdir.rgi_id)
+        thick_end = np.append(thick_end, H_fls[-1])
+        error_end = np.append(error_end, H_err_fls[-1])
 
     log.info('processing of thickness over for this raster file: ' + file_name)
 
