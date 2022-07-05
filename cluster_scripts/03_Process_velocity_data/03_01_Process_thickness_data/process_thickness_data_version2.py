@@ -34,9 +34,17 @@ start = time.time()
 parser = argparse.ArgumentParser()
 parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
 parser.add_argument("-mode", type=bool, default=False, help="pass running mode")
+parser.add_argument("-raster_start", type=int, default=0, help="which raster to start")
+parser.add_argument("-raster_end", type=int, default=1, help="which raster to end")
 args = parser.parse_args()
 config_file = args.conf
 run_mode = args.mode
+
+start_r = args.raster_start
+end_r =  args.raster_end
+
+assert type(start_r) is int
+assert type(end_r) is int
 
 config = ConfigObj(os.path.expanduser(config_file))
 MAIN_PATH = config['main_repo_path']
@@ -169,7 +177,7 @@ log.info("OGGM preprocessing finished! Time needed: %02d:%02d:%02d" %
 path_h = sorted(glob.glob(os.path.join(input_data_path, config['h_file'])))
 path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file'])))
 
-for f, e in zip(path_h[0:2], path_h_e[0:2]):
+for f, e in zip(path_h[start_r:end_r], path_h_e[start_r:end_r]):
     df_r = pd.DataFrame()
     file_name = ''
 
