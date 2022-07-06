@@ -82,14 +82,23 @@ ids = de.RGIId.values
 keep_errors = [(i not in ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_errors]
 
-# Remove glaciers with no solution
-output_path = os.path.join(MAIN_PATH, config['vel_calibration_results_measures'])
 
-no_solution = os.path.join(output_path, 'glaciers_with_no_solution.csv')
-d_no_sol = pd.read_csv(no_solution)
-ids_rgi = d_no_sol.RGIId.values
-keep_no_solution = [(i in ids_rgi) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_no_solution]
+# Keep only glaciers in class 3 and 4
+path_to_problematic = os.path.join(input_data_path,
+                                   'millan_problematic/class3_and_4_ids.txt')
+dl = pd.read_csv(path_to_problematic)
+ids_l = dl.rgi_id.values
+keep_problem = [(i in ids_l) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_problem]
+
+# Remove glaciers with no solution
+# output_path = os.path.join(MAIN_PATH, config['vel_calibration_results_measures'])
+#
+# no_solution = os.path.join(output_path, 'glaciers_with_no_solution.csv')
+# d_no_sol = pd.read_csv(no_solution)
+# ids_rgi = d_no_sol.RGIId.values
+# keep_no_solution = [(i in ids_rgi) for i in rgidf.RGIId]
+# rgidf = rgidf.iloc[keep_no_solution]
 
 cfg.PATHS['working_dir'] = exp_dir_path
 print(cfg.PATHS['working_dir'])
