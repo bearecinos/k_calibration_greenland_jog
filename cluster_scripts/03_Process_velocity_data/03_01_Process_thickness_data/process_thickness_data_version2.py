@@ -124,12 +124,12 @@ keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
 # Keep only problematic glacier from marcos list
-path_to_problematic = os.path.join(input_data_path,
-                                   'millan_problematic/class4_ids.txt')
-dl = pd.read_csv(path_to_problematic)
-ids_l = dl.rgi_id.values
-keep_problem = [(i in ids_l) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_problem]
+# path_to_problematic = os.path.join(input_data_path,
+#                                    'millan_problematic/class4_ids.txt')
+# dl = pd.read_csv(path_to_problematic)
+# ids_l = dl.rgi_id.values
+# keep_problem = [(i in ids_l) for i in rgidf.RGIId]
+# rgidf = rgidf.iloc[keep_problem]
 
 # Exclude glaciers with prepro-erros
 de = pd.read_csv(os.path.join(input_data_path, config['prepro_err']))
@@ -137,8 +137,17 @@ ids = de.RGIId.values
 keep_errors = [(i not in ids) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_errors]
 
+# Remove glaciers that need to be model with gimp
+df_gimp = pd.read_csv(os.path.join(input_data_path, config['glaciers_gimp']))
+keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
+keep_gimp = [(i in df_gimp.RGIId.values) for i in rgidf.RGIId]
+rgidf_gimp = rgidf.iloc[keep_gimp]
+
+rgidf = rgidf.iloc[keep_indexes_no_gimp]
+
 log.info('Starting run for RGI reg: ' + rgi_region)
 log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
+log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 
 # Go - initialize working directories
 # -----------------------------------
@@ -154,6 +163,11 @@ else:
     gdirs = workflow.init_glacier_directories(rgidf)
     workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
                                  source='ARCTICDEM')
+
+    gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+                                 source='GIMP')
+    gdirs.extend(gdirs_gimp)
 
 # Pre-pro tasks
 task_list = [
@@ -195,8 +209,7 @@ for f, e in zip(path_h[start_r:end_r], path_h_e[start_r:end_r]):
     workflow.execute_entity_task(utils_h.millan_data_to_gdir,
                                  gdirs,
                                  ds=f,
-                                 dr=e,
-                                 plot_dir=path_to_output)
+                                 dr=e)
 
     for gdir in gdirs:
 

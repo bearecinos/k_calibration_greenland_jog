@@ -295,29 +295,30 @@ def millan_data_to_gdir(gdir, ds=None, dr=None, plot_dir=None):
             v.base_url = 'https://www.sedoo.fr/theia-publication-products/?uuid=55acbdd5-3982-4eac-89b2-46703557938c'
             v[:] = h_err_new
 
-        misc.write_flowlines_to_shape(gdir, path=gdir.dir)
-        shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
-        shp = gpd.read_file(shp_path)
+        if plot_dir is not None:
+            misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+            shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+            shp = gpd.read_file(shp_path)
 
-        with xr.open_dataset(gdir.get_filepath('gridded_data')) as ds:
-            ds = ds.load()
-        ds.millan_ice_thickness.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
-        ds.millan_ice_thickness_error.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+            with xr.open_dataset(gdir.get_filepath('gridded_data')) as ds:
+                ds = ds.load()
+            ds.millan_ice_thickness.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+            ds.millan_ice_thickness_error.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
 
-        import matplotlib.pyplot as plt
-        cmap_thick = plt.cm.get_cmap('YlGnBu')
+            import matplotlib.pyplot as plt
+            cmap_thick = plt.cm.get_cmap('YlGnBu')
 
-        fig, ax = plt.subplots()
-        mp = ds.salem.get_map();
-        mp.set_shapefile(gdir.read_shapefile('outlines'))
-        mp.set_shapefile(shp, color='r')
-        mp.set_data(ds.millan_ice_thickness)
-        mp.set_cmap(cmap_thick)
-        mp.set_levels(np.arange(0, 500, 10))
-        mp.set_extend('both')
-        mp.visualize(ax=ax, cbar_title='thickness m');
-        plt.savefig(os.path.join(plot_dir, gdir.rgi_id + '.png'))
-        plt.clf()
+            fig, ax = plt.subplots()
+            mp = ds.salem.get_map();
+            mp.set_shapefile(gdir.read_shapefile('outlines'))
+            mp.set_shapefile(shp, color='r')
+            mp.set_data(ds.millan_ice_thickness)
+            mp.set_cmap(cmap_thick)
+            mp.set_levels(np.arange(0, 500, 10))
+            mp.set_extend('both')
+            mp.visualize(ax=ax, cbar_title='thickness m');
+            plt.savefig(os.path.join(plot_dir, gdir.rgi_id + '.png'))
+            plt.clf()
 
 
 def combined_model_thickness_and_observations(file_path):
