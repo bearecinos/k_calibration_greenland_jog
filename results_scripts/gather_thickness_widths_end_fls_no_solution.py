@@ -24,7 +24,7 @@ sys.path.append(MAIN_PATH)
 from k_tools import misc
 
 # Reading glacier directory from prepro
-exp_dir_path = os.path.join(MAIN_PATH, 'output_data/13_Glaciers_no_solution')
+exp_dir_path = os.path.join(MAIN_PATH, 'output_data/14_Glaciers_class3_and_4')
 
 # Reading thickness data form Millan et all 2022
 path_h = os.path.join(MAIN_PATH, config['thickness_obs'])
