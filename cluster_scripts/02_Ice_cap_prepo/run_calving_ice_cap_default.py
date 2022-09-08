@@ -46,7 +46,7 @@ from k_tools import misc
 # Regions:
 # Greenland
 rgi_region = '05'
-rgi_version = '61'
+rgi_version = '62'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------
@@ -176,6 +176,7 @@ m, s = divmod(time.time() - start, 60)
 h, m = divmod(m, 60)
 log.info("OGGM is done! Time needed: %02d:%02d:%02d" % (h, m, s))
 cfg.PARAMS['continue_on_error'] = False
+cfg.PARAMS['tidewater_type'] = 2
 cfg.PARAMS['use_kcalving_for_inversion'] = True
 cfg.PARAMS['use_kcalving_for_ru'] = True
 

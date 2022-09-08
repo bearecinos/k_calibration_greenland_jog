@@ -48,7 +48,7 @@ from k_tools import misc
 # Regions:
 # Greenland
 rgi_region = '05'
-rgi_version = '61'
+rgi_version = '62'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------
@@ -129,12 +129,12 @@ rgidf_gimp = rgidf.iloc[keep_gimp]
 rgidf = rgidf.iloc[keep_indexes_no_gimp]
 
 # Keep only glaciers in class 3 and 4
-path_to_problematic = os.path.join(input_data_path,
-                                   'millan_problematic/class3_and_4_ids.txt')
-dl = pd.read_csv(path_to_problematic)
-ids_l = dl.rgi_id.values
-keep_problem = [(i in ids_l) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_problem]
+# path_to_problematic = os.path.join(input_data_path,
+#                                    'millan_problematic/class3_and_4_ids.txt')
+# dl = pd.read_csv(path_to_problematic)
+# ids_l = dl.rgi_id.values
+# keep_problem = [(i in ids_l) for i in rgidf.RGIId]
+# rgidf = rgidf.iloc[keep_problem]
 
 # output_path = os.path.join(MAIN_PATH, config['vel_calibration_results_measures'])
 # no_solution = os.path.join(output_path, 'glaciers_with_no_solution.csv')
@@ -170,7 +170,7 @@ else:
                                  source='GIMP')
     gdirs.extend(gdirs_gimp)
 
-#print(gdirs)
+print(gdirs)
 #
 # execute_entity_task(tasks.glacier_masks, gdirs)
 
@@ -217,6 +217,7 @@ h, m = divmod(m, 60)
 log.info("OGGM is done! Time needed: %02d:%02d:%02d" % (h, m, s))
 
 cfg.PARAMS['continue_on_error'] = False
+cfg.PARAMS['tidewater_type'] = 2
 cfg.PARAMS['use_kcalving_for_inversion'] = True
 cfg.PARAMS['use_kcalving_for_ru'] = True
 
