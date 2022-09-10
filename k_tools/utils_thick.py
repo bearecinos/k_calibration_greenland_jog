@@ -11,7 +11,7 @@ from salem import wgs84
 import xarray as xr
 import geopandas as gpd
 from oggm import utils
-from oggm.utils._workflow import _get_centerline_lonlat
+from oggm.utils._workflow import get_centerline_lonlat
 from k_tools import misc
 
 # Module logger
@@ -155,7 +155,7 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     y_coord: list of latitudes
     """
 
-    coords = _get_centerline_lonlat(gdir,
+    coords = get_centerline_lonlat(gdir,
                                    flowlines_output=True)[-1]['geometry'].coords
 
     lon = coords.xy[0]
@@ -173,7 +173,7 @@ def calculate_observation_thickness(gdir, ds_fls, dr_fls):
     assert len(lon) == len(H_fls)
     assert len(lat) == len(H_err_fls)
 
-    return H_fls.data, H_err_fls.data, lon, lat
+    return H_fls.data, H_err_fls.data, np.array(lon), np.array(lat)
 
 @utils.entity_task(log)
 def thick_data_to_gdir(gdir, ds=None, dr=None):

@@ -5,38 +5,43 @@
 
 # Python imports
 from __future__ import division
+
+# Module logger
+import logging
+log = logging.getLogger(__name__)
+
+# Python imports
 import os
-import glob
 import sys
-import numpy as np
 import geopandas as gpd
+import salem
+import numpy as np
 import pandas as pd
 from configobj import ConfigObj
-import time
-import salem
-import xarray as xr
 import argparse
-import pickle
+import math
+import xarray as xr
 
 # Imports oggm
 import oggm.cfg as cfg
 from oggm import workflow, utils
 from oggm import tasks
 from oggm.workflow import execute_entity_task
+from oggm.shop import millan22
 
-# Module logger
-import logging
-log = logging.getLogger(__name__)
 # Time
+import time
 start = time.time()
 
 # Parameters to pass into the python script form the command line
 parser = argparse.ArgumentParser()
 parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
 parser.add_argument("-mode", type=bool, default=False, help="pass running mode")
+parser.add_argument("-correct_width", type=bool, default=False, help="correct terminus width with extra data")
 args = parser.parse_args()
 config_file = args.conf
 run_mode = args.mode
+correct_width = args.correct_width
 
 config = ConfigObj(os.path.expanduser(config_file))
 MAIN_PATH = config['main_repo_path']
@@ -47,9 +52,10 @@ sys.path.append(MAIN_PATH)
 from k_tools import utils_thick as utils_h
 from k_tools import misc
 
-# Regions: Greenland
+# Regions:
+# Greenland
 rgi_region = '05'
-rgi_version = '61'
+rgi_version = '62'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------
@@ -71,7 +77,8 @@ if run_mode:
 else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
-    cfg.PARAMS['mp_processes'] = 20
+    cfg.PARAMS['mp_processes'] = 16
+
 
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
@@ -91,6 +98,12 @@ rgidf.crs = salem.wgs84.srs
 # We use intersects
 cfg.set_intersects_db(os.path.join(input_data_path, config['intercepts']))
 rgidf = rgidf.sort_values('RGIId', ascending=True)
+# We use width corrections
+# From Will's flux gates
+data_link = os.path.join(input_data_path,
+                         'wills_data.csv')
+dfmac = pd.read_csv(data_link, index_col=0)
+dfmac = dfmac[dfmac.Region_name == 'Greenland']
 
 if not run_mode:
     # Read Areas for the ice-cap computed in OGGM during
@@ -104,24 +117,23 @@ if not run_mode:
     rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
               'Area'] = df_prepro_ic.rgi_area_km2.values
 
-# Run only for Lake Terminating and Marine Terminating
+# Remove Land-terminating
 glac_type = ['0']
 keep_glactype = [(i not in glac_type) for i in rgidf.TermType]
 rgidf = rgidf.iloc[keep_glactype]
 
-# Run only glaciers that have a week connection or are
-# not connected to the ice-sheet
+# Remove glaciers with strong connection to the ice sheet
 connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
 
-# Keep only problematic glacier from marcos list
-path_to_problematic = os.path.join(input_data_path,
-                                   'millan_problematic/class2_ids.txt')
-dl = pd.read_csv(path_to_problematic)
-ids_l = dl.rgi_id.values
-keep_problem = [(i in ids_l) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_problem]
+# # Keep only problematic glacier from marcos list
+# path_to_problematic = os.path.join(input_data_path,
+#                                    'millan_problematic/class2_ids.txt')
+# dl = pd.read_csv(path_to_problematic)
+# ids_l = dl.rgi_id.values
+# keep_problem = [(i in ids_l) for i in rgidf.RGIId]
+# rgidf = rgidf.iloc[keep_problem]
 
 # Exclude glaciers with prepro-erros
 de = pd.read_csv(os.path.join(input_data_path, config['prepro_err']))
@@ -144,7 +156,7 @@ log.info('Number of glaciers with GIMP: {}'.format(len(rgidf_gimp)))
 # Go - initialize working directories
 # -----------------------------------
 if run_mode:
-    keep_index_to_run = [(i in config['RGI_id_to_test']) for i in rgidf.RGIId]
+    keep_index_to_run = [(i in ['RGI60-05.12047', 'RGI60-05.00800']) for i in rgidf.RGIId]
     rgidf = rgidf.iloc[keep_index_to_run]
     log.info('Starting run for RGI reg: ' + rgi_region)
     log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
@@ -171,8 +183,17 @@ task_list = [
     tasks.catchment_width_geom,
     tasks.catchment_width_correction,
 ]
+
 for task in task_list:
     execute_entity_task(task, gdirs)
+
+if correct_width:
+    for gdir in gdirs:
+        if gdir.rgi_id in dfmac.index:
+            width = dfmac.loc[gdir.rgi_id]['gate_length_km']
+            tasks.terminus_width_correction(gdir, new_width=width*1000)
+
+workflow.execute_entity_task(millan22.thickness_to_gdir, gdirs, add_error=True)
 
 # Log
 m, s = divmod(time.time() - start, 60)
@@ -180,70 +201,66 @@ h, m = divmod(m, 60)
 log.info("OGGM preprocessing finished! Time needed: %02d:%02d:%02d" %
          (h, m, s))
 
-path_h = sorted(glob.glob(os.path.join(input_data_path, config['h_file'])))
-path_h_e = sorted(glob.glob(os.path.join(input_data_path, config['h_error_file'])))
+path_to_output = cfg.PATHS['working_dir']+'/'+ 'millan_22'
+if not os.path.exists(path_to_output):
+    os.makedirs(path_to_output)
 
-for f, e in zip(path_h[0:2], path_h_e[0:2]):
-    file_name = os.path.basename(f)[0:-4]
+ids_no_data = []
+area_no_data = []
+rgi_ids = []
+thick_end = []
+error_end = []
 
-    path_to_output = cfg.PATHS['working_dir']+'/'+ file_name
-    if not os.path.exists(path_to_output):
-        os.makedirs(path_to_output)
+for gdir in gdirs:
 
-    data_frame = []
-    rgi_ids = []
-    thick_end = []
-    error_end = []
+    # first we compute the centerlines as shapefile to crop the satellite
+    # data
+    misc.write_flowlines_to_shape(gdir, path=gdir.dir)
+    shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
+    shp = gpd.read_file(shp_path)
 
-    workflow.execute_entity_task(utils_h.millan_data_to_gdir,
-                                 gdirs,
-                                 ds=f,
-                                 dr=e,
-                                 plot_dir=path_to_output)
+    ds = xr.open_dataset(gdir.get_filepath('gridded_data'))
 
-    for gdir in gdirs:
+    try:
+        ds.millan_ice_thickness.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+        ds.millan_ice_thickness_err.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
+    except AttributeError:
+        print('There is no data for this glacier', gdir.rgi_id)
+        ids_no_data = np.append(ids_no_data, gdir.rgi_id)
+        area_no_data = np.append(area_no_data, gdir.rgi_area_km2)
+        continue
 
-        with xr.open_dataset(gdir.get_filepath('gridded_data')) as ds:
-            ds = ds.load()
+    ds_fls, dr_fls = utils_h.crop_thick_data_to_flowline(ds.millan_ice_thickness,
+                                                         ds.millan_ice_thickness_err,
+                                                         shp)
 
-        try:
-            ds.millan_ice_thickness.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
-            ds.millan_ice_thickness_error.attrs['pyproj_srs'] = ds.attrs['pyproj_srs']
-        except AttributeError:
-            log.info("There is no data for this glacier in this raster")
-            continue
+    H_fls, H_err_fls, lon, lat = utils_h.calculate_observation_thickness(gdir, ds_fls, dr_fls)
 
-        misc.write_flowlines_to_shape(gdir, path=gdir.dir)
-        shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
-        shp = gpd.read_file(shp_path)
-
-        ds_fls, dr_fls = utils_h.crop_thick_data_to_flowline(ds.millan_ice_thickness,
-                                                             ds.millan_ice_thickness_error,
-                                                             shp)
-
-        H_fls, H_err_fls, lon, lat = utils_h.calculate_observation_thickness(gdir, ds_fls, dr_fls)
-
-
-        d = {'H_flowline': H_fls,
-             'H_flowline_error': H_err_fls,
-             'lon': lon,
-             'lat': lat
-             }
-        data_frame = pd.DataFrame(data=d)
-        data_frame.to_csv(os.path.join(path_to_output, gdir.rgi_id + '.csv'))
-
-        rgi_ids = np.append(rgi_ids, gdir.rgi_id)
-        thick_end = np.append(thick_end, H_fls[-1])
-        error_end = np.append(error_end, H_err_fls[-1])
-
-    log.info('processing of thickness over for this raster file: ' + file_name)
-
-    dr = {'RGI_ID': rgi_ids,
-          'thick_end': thick_end,
-          'error_end': error_end,
+    # Saving the individual flowline data
+    d = {'H_flowline': H_fls,
+         'H_flowline_error': H_err_fls,
+         'lon': lon,
+         'lat': lat
          }
+    data_frame = pd.DataFrame(data=d)
+    data_frame.to_csv(os.path.join(path_to_output, gdir.rgi_id + '.csv'))
 
-    df_r = pd.DataFrame(data=dr)
-    df_r.to_csv(os.path.join(path_to_output,'thickness_observations_'+ file_name +'.csv'))
-#
-# misc.reset_per_glacier_working_dir()
+    rgi_ids = np.append(rgi_ids, gdir.rgi_id)
+    thick_end = np.append(thick_end, H_fls[-1])
+    error_end = np.append(error_end, H_err_fls[-1])
+
+# Saving the end of the flowline data
+dr = {'RGI_ID': rgi_ids,
+      'thick_end': thick_end,
+      'error_end': error_end,
+     }
+
+df_r = pd.DataFrame(data=dr)
+df_r.to_csv(os.path.join(path_to_output,'thickness_observations.csv'))
+
+dnodata = {'RGIId': ids_no_data,
+           'Area (km)': area_no_data}
+df_nodata = pd.DataFrame(data=dnodata)
+df_nodata.to_csv(cfg.PATHS['working_dir'] + '/glaciers_with_no_thickness_data.csv')
+
+misc.reset_per_glacier_working_dir()

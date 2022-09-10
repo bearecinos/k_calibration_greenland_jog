@@ -4,35 +4,40 @@
 # main flow-line with the respective uncertainty from the MEaSUREs tiff files
 # Python imports
 from __future__ import division
+
+# Module logger
+import logging
+log = logging.getLogger(__name__)
+
+# Python imports
 import os
 import sys
-import numpy as np
 import geopandas as gpd
+import salem
+import numpy as np
 import pandas as pd
 from configobj import ConfigObj
-import time
-import salem
 import argparse
 
-# Imports oggm
+# Locals
 import oggm.cfg as cfg
 from oggm import workflow, utils
 from oggm import tasks
 from oggm.workflow import execute_entity_task
 
-# Module logger
-import logging
-log = logging.getLogger(__name__)
 # Time
+import time
 start = time.time()
 
 # Parameters to pass into the python script form the command line
 parser = argparse.ArgumentParser()
 parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
 parser.add_argument("-mode", type=bool, default=False, help="pass running mode")
+parser.add_argument("-correct_width", type=bool, default=False, help="correct terminus width with extra data")
 args = parser.parse_args()
 config_file = args.conf
 run_mode = args.mode
+correct_width = args.correct_width
 
 config = ConfigObj(os.path.expanduser(config_file))
 MAIN_PATH = config['main_repo_path']
@@ -43,9 +48,10 @@ sys.path.append(MAIN_PATH)
 from k_tools import utils_velocity as utils_vel
 from k_tools import misc
 
-# Regions: Greenland
+# Regions:
+# Greenland
 rgi_region = '05'
-rgi_version = '61'
+rgi_version = '62'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------
@@ -69,6 +75,7 @@ else:
     cfg.PARAMS['use_multiprocessing'] = True
     cfg.PARAMS['mp_processes'] = 16
 
+
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
@@ -87,6 +94,12 @@ rgidf.crs = salem.wgs84.srs
 # We use intersects
 cfg.set_intersects_db(os.path.join(input_data_path, config['intercepts']))
 rgidf = rgidf.sort_values('RGIId', ascending=True)
+# We use width corrections
+# From Will's flux gates
+data_link = os.path.join(input_data_path,
+                         'wills_data.csv')
+dfmac = pd.read_csv(data_link, index_col=0)
+dfmac = dfmac[dfmac.Region_name == 'Greenland']
 
 if not run_mode:
     # Read Areas for the ice-cap computed in OGGM during
@@ -100,13 +113,12 @@ if not run_mode:
     rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
               'Area'] = df_prepro_ic.rgi_area_km2.values
 
-# Run only for Lake Terminating and Marine Terminating
+# Remove Land-terminating
 glac_type = ['0']
 keep_glactype = [(i not in glac_type) for i in rgidf.TermType]
 rgidf = rgidf.iloc[keep_glactype]
 
-# Run only glaciers that have a week connection or are
-# not connected to the ice-sheet
+# Remove glaciers with strong connection to the ice sheet
 connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
@@ -159,8 +171,15 @@ task_list = [
     tasks.catchment_width_geom,
     tasks.catchment_width_correction,
 ]
+
 for task in task_list:
     execute_entity_task(task, gdirs)
+
+if correct_width:
+    for gdir in gdirs:
+        if gdir.rgi_id in dfmac.index:
+            width = dfmac.loc[gdir.rgi_id]['gate_length_km']
+            tasks.terminus_width_correction(gdir, new_width=width*1000)
 
 # Log
 m, s = divmod(time.time() - start, 60)
@@ -178,6 +197,7 @@ rel_tol_calving_front = []
 length_fls = []
 
 files_no_data = []
+area_no_data = []
 
 dvel = utils_vel.open_vel_raster(os.path.join(input_data_path,
                                               config['vel_path']))
@@ -213,8 +233,10 @@ for gdir in gdirs:
     else:
         print('There is no velocity data for this glacier')
         files_no_data = np.append(files_no_data, gdir.rgi_id)
+        area_no_data = np.append(area_no_data, gdir.rgi_area_km2)
 
-d = {'RGIId': files_no_data}
+d = {'RGIId': files_no_data,
+     'Area (km)': area_no_data}
 df = pd.DataFrame(data=d)
 
 df.to_csv(cfg.PATHS['working_dir'] + '/glaciers_with_no_velocity_data.csv')
