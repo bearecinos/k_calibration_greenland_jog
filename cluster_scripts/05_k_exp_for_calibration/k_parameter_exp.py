@@ -2,28 +2,29 @@
 # and compute model surface velocity and frontal ablation fluxes
 # per TW glacier in Greenland
 from __future__ import division
+
+# Module logger
+import logging
+log = logging.getLogger(__name__)
+
+# Python imports
 import os
 import sys
-import numpy as np
 import geopandas as gpd
 import salem
 import pandas as pd
 from configobj import ConfigObj
-import time
 import argparse
 
-# Imports oggm
+# Locals
 import oggm.cfg as cfg
 from oggm import workflow
 from oggm import tasks
 from oggm.workflow import execute_entity_task
 from oggm import utils
-from oggm.core import inversion
 
-# Module logger
-import logging
-log = logging.getLogger(__name__)
 # Time
+import time
 start = time.time()
 
 # Parameters to pass into the python script form the command line
@@ -45,9 +46,10 @@ sys.path.append(MAIN_PATH)
 from k_tools import utils_velocity as utils_vel
 from k_tools import misc
 
-# Region Greenland
+# Regions:
+# Greenland
 rgi_region = '05'
-rgi_version = '61'
+rgi_version = '62'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------
@@ -74,6 +76,7 @@ else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
     cfg.PARAMS['mp_processes'] = 16
+
 
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
@@ -114,13 +117,12 @@ if not run_mode:
     rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
               'Area'] = df_prepro_ic.rgi_area_km2.values
 
-# Run only for Lake Terminating and Marine Terminating
+# Remove Land-terminating
 glac_type = ['0']
 keep_glactype = [(i not in glac_type) for i in rgidf.TermType]
 rgidf = rgidf.iloc[keep_glactype]
 
-# Run only glaciers that have a week connection or are
-# not connected to the ice-sheet
+# Remove glaciers with strong connection to the ice sheet
 connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
@@ -173,6 +175,7 @@ task_list = [
     tasks.catchment_width_geom,
     tasks.catchment_width_correction,
 ]
+
 for task in task_list:
     execute_entity_task(task, gdirs)
 
@@ -195,9 +198,9 @@ execute_entity_task(tasks.mass_conservation_inversion, gdirs)
 # Log
 m, s = divmod(time.time() - start, 60)
 h, m = divmod(m, 60)
-log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" %
-         (h, m, s))
+log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" % (h, m, s))
 
+cfg.PARAMS['tidewater_type'] = 2
 cfg.PARAMS['use_kcalving_for_inversion'] = True
 cfg.PARAMS['use_kcalving_for_ru'] = True
 
