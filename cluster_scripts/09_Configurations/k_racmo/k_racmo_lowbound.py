@@ -142,10 +142,8 @@ ids_rgi = d_no_sol.RGIId.values
 keep_no_solution = [(i not in ids_rgi) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_no_solution]
 
-output_process = os.path.join(MAIN_PATH,
-                              config['gaps_racmo'])
-
-no_racmo_data = os.path.join(output_process, 'glaciers_with_no_racmo_data.csv')
+no_racmo_data = os.path.join(MAIN_PATH,
+                           config['gaps_racmo'])
 d_no_data = pd.read_csv(no_racmo_data)
 ids_no_data = d_no_data.RGIId.values
 keep_no_data = [(i not in ids_no_data) for i in rgidf.RGIId]
