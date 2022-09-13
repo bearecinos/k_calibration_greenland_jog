@@ -2,6 +2,12 @@
 # and compute model surface velocity and frontal ablation fluxes
 # per TW glacier in Greenland
 from __future__ import division
+
+# Module logger
+import logging
+log = logging.getLogger(__name__)
+
+# Python imports
 import os
 import sys
 import geopandas as gpd
@@ -9,10 +15,9 @@ import salem
 import pandas as pd
 import numpy as np
 from configobj import ConfigObj
-import time
 import argparse
 
-# Imports oggm
+# Locals
 import oggm.cfg as cfg
 from oggm import workflow
 from oggm import tasks
@@ -20,10 +25,8 @@ from oggm.workflow import execute_entity_task
 from oggm import utils
 from oggm.core import inversion
 
-# Module logger
-import logging
-log = logging.getLogger(__name__)
 # Time
+import time
 start = time.time()
 
 # Parameters to pass into the python script form the command line
@@ -44,9 +47,10 @@ sys.path.append(MAIN_PATH)
 from k_tools import misc
 from k_tools import utils_velocity as utils_vel
 
-# Region Greenland
+# Regions:
+# Greenland
 rgi_region = '05'
-rgi_version = '61'
+rgi_version = '62'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------
@@ -62,6 +66,7 @@ else:
     WORKING_DIR = SLURM_WORKDIR
     cfg.PATHS['working_dir'] = WORKING_DIR
 
+
 print(cfg.PATHS['working_dir'])
 
 # Use multiprocessing
@@ -71,7 +76,7 @@ if run_mode:
 else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
-    cfg.PARAMS['mp_processes'] = 6
+    cfg.PARAMS['mp_processes'] = 16
 
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
@@ -112,13 +117,12 @@ if not run_mode:
     rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
               'Area'] = df_prepro_ic.rgi_area_km2.values
 
-# Run only for Lake Terminating and Marine Terminating
+# Remove Land-terminating
 glac_type = ['0']
 keep_glactype = [(i not in glac_type) for i in rgidf.TermType]
 rgidf = rgidf.iloc[keep_glactype]
 
-# Run only glaciers that have a week connection or are
-# not connected to the ice-sheet
+# Remove glaciers with strong connection to the ice sheet
 connection = [2]
 keep_connection = [(i not in connection) for i in rgidf.Connect]
 rgidf = rgidf.iloc[keep_connection]
@@ -139,8 +143,8 @@ ids_rgi = d_no_sol.RGIId.values
 keep_no_solution = [(i not in ids_rgi) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_no_solution]
 
-no_vel_data = os.path.join(output_measures,
-                           'glaciers_with_no_vel_data.csv')
+no_vel_data = os.path.join(MAIN_PATH,
+                           config['gaps_vel_measures'])
 d_no_data = pd.read_csv(no_vel_data)
 ids_no_data = d_no_data.RGIId.values
 keep_no_data = [(i not in ids_no_data) for i in rgidf.RGIId]
@@ -173,10 +177,11 @@ else:
     workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
                                  source='ARCTICDEM')
 
-    gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-    workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
-                                 source='GIMP')
-    gdirs.extend(gdirs_gimp)
+    if len(rgidf_gimp) > 0:
+        gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
+        workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+                                     source='GIMP')
+        gdirs.extend(gdirs_gimp)
 
 # Pre-pro tasks
 task_list = [
@@ -188,6 +193,7 @@ task_list = [
     tasks.catchment_width_geom,
     tasks.catchment_width_correction,
 ]
+
 for task in task_list:
     execute_entity_task(task, gdirs)
 
@@ -229,6 +235,7 @@ for gdir in gdirs:
     k_value = sel.k_for_lw_bound.values
 
     cfg.PARAMS['continue_on_error'] = False
+    cfg.PARAMS['tidewater_type'] = 2
     cfg.PARAMS['inversion_calving_k'] = float(k_value)
     cfg.PARAMS['use_kcalving_for_inversion'] = True
     cfg.PARAMS['use_kcalving_for_ru'] = True
