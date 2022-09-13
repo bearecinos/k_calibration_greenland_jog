@@ -142,7 +142,10 @@ ids_rgi = d_no_sol.RGIId.values
 keep_no_solution = [(i not in ids_rgi) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_no_solution]
 
-no_racmo_data = os.path.join(output_racmo, 'glaciers_with_no_racmo_data.csv')
+output_process = os.path.join(MAIN_PATH,
+                              config['gaps_racmo'])
+
+no_racmo_data = os.path.join(output_process, 'glaciers_with_no_racmo_data.csv')
 d_no_data = pd.read_csv(no_racmo_data)
 ids_no_data = d_no_data.RGIId.values
 keep_no_data = [(i not in ids_no_data) for i in rgidf.RGIId]
@@ -184,10 +187,11 @@ else:
     workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
                                  source='ARCTICDEM')
 
-    gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
-    workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
-                                 source='GIMP')
-    gdirs.extend(gdirs_gimp)
+    if len(rgidf_gimp) > 0:
+        gdirs_gimp = workflow.init_glacier_directories(rgidf_gimp)
+        workflow.execute_entity_task(tasks.define_glacier_region, gdirs_gimp,
+                                     source='GIMP')
+        gdirs.extend(gdirs_gimp)
 
 # Pre-pro tasks
 task_list = [
