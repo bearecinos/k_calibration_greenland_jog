@@ -14,9 +14,9 @@ echo $OUTDIR_low
 echo $OUTDIR_obs
 echo $OUTDIR_up
 
-python ${k_exp}/${k_exp}_lowbound.py -conf "/scratch/local/brecinos/k_calibration_greenland_jog/config.ini"
-python ${k_exp}/${k_exp}_value.py -conf "/scratch/local/brecinos/k_calibration_greenland_jog/config.ini"
-python ${k_exp}/${k_exp}_upbound.py -conf "/scratch/local/brecinos/k_calibration_greenland_jog/config.ini"
+python ${k_exp}/${k_exp}_lowbound.py -conf "/scratch/local/brecinos/k_calibration_greenland_jog/config.ini" -correct_width True
+python ${k_exp}/${k_exp}_value.py -conf "/scratch/local/brecinos/k_calibration_greenland_jog/config.ini" -correct_width True
+python ${k_exp}/${k_exp}_upbound.py -conf "/scratch/local/brecinos/k_calibration_greenland_jog/config.ini" -correct_width True
 
 # Print a final message so you can actually see it being done in the output log.
 echo "RUN DONE"
