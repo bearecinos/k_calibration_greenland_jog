@@ -4,13 +4,19 @@ import glob
 import pandas as pd
 from configobj import ConfigObj
 from functools import reduce
+import argparse
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+args = parser.parse_args()
+config_file = args.conf
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
 sys.path.append(MAIN_PATH)
 
 from k_tools import misc
-
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 
 input_data = os.path.join(MAIN_PATH, config['volume_results'])
 
@@ -19,7 +25,7 @@ output_path= os.path.join(MAIN_PATH, 'output_data/13_Merged_data')
 if not os.path.exists(output_path):
     os.makedirs(output_path)
 
-config_paths = pd.read_csv(os.path.join(MAIN_PATH,
+config_paths = pd.read_csv(os.path.join(config['input_data_folder'],
                                         config['configuration_names']))
 
 exp_name = []
@@ -34,7 +40,8 @@ print(all_files)
 
 li = []
 for filename, name in zip(all_files, exp_name):
-    df = pd.read_csv(filename)
+    df = pd.read_csv(filename, index_col=False)
+    df.rename(columns={'Unnamed: 0.1': 'rgi_id'}, inplace=True)
     li.append(df)
 
 # Now lets find the glaciers for which we have data among all methods
@@ -54,7 +61,7 @@ df_common_rest.to_csv(os.path.join(output_path,
                            'common_glaciers_rest_all_methods.csv'))
 
 # Read Farinotti and Huss data
-df_consensus = pd.read_hdf(os.path.join(MAIN_PATH,
+df_consensus = pd.read_hdf(os.path.join(config['input_data_folder'],
                                         config['consensus_data']))
 df_consensus.reset_index(level=0, inplace=True)
 
@@ -91,7 +98,7 @@ print('Total ice cap basins')
 print(len(df_prepro_ic))
 
 # Exclude glaciers with prepro-erros from df_prepro_ic
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+de = pd.read_csv(os.path.join(config['input_data_folder'], config['prepro_err']))
 ids = de.RGIId.values
 keep_errors = [(i not in ids) for i in df_prepro_ic.rgi_id]
 df_prepro_ic = df_prepro_ic.iloc[keep_errors]
