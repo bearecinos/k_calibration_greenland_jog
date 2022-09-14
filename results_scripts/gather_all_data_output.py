@@ -4,22 +4,28 @@ import glob
 import pandas as pd
 from configobj import ConfigObj
 from functools import reduce
+import argparse
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+args = parser.parse_args()
+config_file = args.conf
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
 sys.path.append(MAIN_PATH)
 
 from k_tools import misc
 
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
-
 input_data = os.path.join(MAIN_PATH, config['volume_results'])
 
 # Where we stored merged data
-output_path= os.path.join(MAIN_PATH, 'output_data/13_Merged_data')
+output_path= os.path.join(MAIN_PATH, 'output_data/12_Merged_data')
 if not os.path.exists(output_path):
     os.makedirs(output_path)
 
-config_paths = pd.read_csv(os.path.join(MAIN_PATH,
+config_paths = pd.read_csv(os.path.join(config['input_data_folder'],
                                         config['configuration_names']))
 
 exp_name = []
@@ -34,7 +40,8 @@ print(all_files[0:6])
 
 its_live_li = []
 for filename, name in zip(all_files[0:3], exp_name[0:3]):
-    df = pd.read_csv(filename)
+    df = pd.read_csv(filename, index_col=False)
+    df.rename(columns={'Unnamed: 0.1': 'rgi_id'}, inplace=True)
     its_live_li.append(df)
 
 # Now lets find the glaciers for which we have data among all methods
@@ -46,7 +53,8 @@ df_itslive.to_csv(os.path.join(output_path,
 
 measures_li = []
 for filename, name in zip(all_files[3:6], exp_name[3:6]):
-    df = pd.read_csv(filename)
+    df = pd.read_csv(filename, index_col=False)
+    df.rename(columns={'Unnamed: 0.1': 'rgi_id'}, inplace=True)
     measures_li.append(df)
 
 # Now lets find the glaciers for which we have data among all methods
@@ -60,7 +68,8 @@ print(all_files[0:3] + all_files[6:10])
 its_live_racmo_li = []
 for filename, name in zip(all_files[0:3] + all_files[6:10],
                           exp_name[0:3] + exp_name[6:10]):
-    df = pd.read_csv(filename)
+    df = pd.read_csv(filename, index_col=False)
+    df.rename(columns={'Unnamed: 0.1': 'rgi_id'}, inplace=True)
     its_live_racmo_li.append(df)
 
 # Now lets find the glaciers for which we have data among all methods
@@ -76,7 +85,8 @@ print(all_files[3:6] + all_files[6:10])
 measures_racmo_li = []
 for filename, name in zip(all_files[3:6] + all_files[6:10],
                           exp_name[3:6] + exp_name[6:10]):
-    df = pd.read_csv(filename)
+    df = pd.read_csv(filename, index_col=False)
+    df.rename(columns={'Unnamed: 0.1': 'rgi_id'}, inplace=True)
     measures_racmo_li.append(df)
 
 # Now lets find the glaciers for which we have data among all methods
