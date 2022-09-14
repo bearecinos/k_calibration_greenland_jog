@@ -137,13 +137,18 @@ category = ['Area modeled with ITSLIVE',
 area = [area_cover_itslive,
         area_cover_measures,
         area_cover_racmo,
-        area_racmo_neg]
+        df_racmo_no_negative.rgi_area_km2.sum()]
 
-area_percent = area/study_area*100
+area_percent = [area_itslive,
+                area_measures,
+                area_racmo,
+                area_racmo_neg]
 
 d = {'Category': category,
      'Area (km²)': area,
      'Area (% of Greenland)': area_percent}
 ds = pd.DataFrame(data=d)
+
+print(ds)
 
 ds.to_csv(os.path.join(output_path, 'area_stats.csv'))
