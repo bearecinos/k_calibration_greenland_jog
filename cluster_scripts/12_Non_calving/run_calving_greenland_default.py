@@ -107,6 +107,18 @@ data_link = os.path.join(input_data_path,
 dfmac = pd.read_csv(data_link, index_col=0)
 dfmac = dfmac[dfmac.Region_name == 'Greenland']
 
+if not run_mode:
+    # Read Areas for the ice-cap computed in OGGM during
+    # the pre-processing runs
+    df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
+                                            config['ice_cap_prepro']))
+
+    df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
+
+    # Assign an area to the ice cap from OGGM to avoid errors
+    rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
+              'Area'] = df_prepro_ic.rgi_area_km2.values
+
 # Get glaciers that have no solution
 output_itslive = os.path.join(MAIN_PATH,
                               config['vel_calibration_results_itslive'])
