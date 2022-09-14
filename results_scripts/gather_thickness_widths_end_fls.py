@@ -38,6 +38,17 @@ for configuration in config_paths.config_path:
 
 print(full_config_paths)
 
+# Remove glaciers with no input data
+no_data_itslive = np.repeat(os.path.join(MAIN_PATH,
+                           config['gaps_vel_itslive']), 3)
+no_data_measures = np.repeat(os.path.join(MAIN_PATH,
+                       config['gaps_vel_measures']),3)
+no_data_racmo = np.repeat(os.path.join(MAIN_PATH,
+                       config['gaps_racmo']), 3)
+
+no_data_paths = np.concatenate((no_data_itslive, no_data_measures), axis=0)
+no_data_paths = np.concatenate((no_data_paths, no_data_racmo), axis=0)
+
 # Make output dir
 marcos_data = os.path.join(MAIN_PATH, 'output_data_marco')
 if not os.path.exists(marcos_data):
@@ -47,7 +58,7 @@ cfg.initialize()
 
 data_frame = []
 
-for path, output_config in zip(full_config_paths, config_paths.results_output):
+for path, no_data, output_config in zip(full_config_paths, no_data_paths, config_paths.results_output):
 
     experimet_name = misc.splitall(path)[-2]
     exp_dir_output = os.path.join(marcos_data, experimet_name)
@@ -83,15 +94,6 @@ for path, output_config in zip(full_config_paths, config_paths.results_output):
     ids_rgi = d_no_sol.RGIId.values
     keep_no_solution = [(i not in ids_rgi) for i in rgidf.RGIId]
     rgidf = rgidf.iloc[keep_no_solution]
-
-    # Remove glaciers with no input data
-    no_data = os.path.join(output_path,
-                           'glaciers_with_no_vel_data.csv')
-    if os.path.exists(no_data):
-        no_data = no_data
-    else:
-        no_data = os.path.join(output_path,
-                               'glaciers_with_no_racmo_data.csv')
 
     d_no_data = pd.read_csv(no_data)
     ids_no_data = d_no_data.RGIId.values
