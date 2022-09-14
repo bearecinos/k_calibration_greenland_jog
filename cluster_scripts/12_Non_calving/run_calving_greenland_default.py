@@ -107,18 +107,6 @@ data_link = os.path.join(input_data_path,
 dfmac = pd.read_csv(data_link, index_col=0)
 dfmac = dfmac[dfmac.Region_name == 'Greenland']
 
-if not run_mode:
-    # Read Areas for the ice-cap computed in OGGM during
-    # the pre-processing runs
-    df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
-                                            config['ice_cap_prepro']))
-
-    df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
-
-    # Assign an area to the ice cap from OGGM to avoid errors
-    rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
-              'Area'] = df_prepro_ic.rgi_area_km2.values
-
 # Get glaciers that have no solution
 output_itslive = os.path.join(MAIN_PATH,
                               config['vel_calibration_results_itslive'])
@@ -128,6 +116,15 @@ d_no_sol = pd.read_csv(no_solution)
 ids_rgi = d_no_sol.RGIId.values
 keep_no_solution = [(i in ids_rgi) for i in rgidf.RGIId]
 rgidf = rgidf.iloc[keep_no_solution]
+
+# Get glaciers that belong to the ice cap.
+rgidf_ice_cap = rgidf[rgidf['RGIId'].str.match('RGI60-05.10315')]
+# Get the id's for filter
+ice_cap_ids = rgidf_ice_cap.RGIId.values
+
+# Removing the Ice cap
+keep_indexes = [(i not in ice_cap_ids) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_indexes]
 
 # Sort for more efficient parallel computing
 rgidf = rgidf.sort_values('Area', ascending=False)
