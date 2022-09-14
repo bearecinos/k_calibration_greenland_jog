@@ -40,7 +40,6 @@ parser.add_argument("-mode", type=bool, default=False, help="pass running mode")
 args = parser.parse_args()
 config_file = args.conf
 run_mode = args.mode
-correct_width = args.correct_width
 
 config = ConfigObj(os.path.expanduser(config_file))
 MAIN_PATH = config['main_repo_path']
@@ -77,7 +76,7 @@ if run_mode:
 else:
     # ONLY IN THE CLUSTER!
     cfg.PARAMS['use_multiprocessing'] = True
-    cfg.PARAMS['mp_processes'] = 16
+    cfg.PARAMS['mp_processes'] = 6
 
 
 cfg.PARAMS['border'] = 20
