@@ -29,13 +29,13 @@ if not os.path.exists(output_path):
     os.makedirs(output_path)
 
 # Read in Ice cap preprocessing
-df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
+df_prepro_ic = pd.read_csv(os.path.join(config['input_data_folder'],
                                         config['ice_cap_prepro']))
 print('Total ice cap basins')
 print(len(df_prepro_ic))
 
 # Exclude glaciers with prepro-erros from df_prepro_ic
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
+de = pd.read_csv(os.path.join(config['input_data_folder'], config['prepro_err']))
 ids = de.RGIId.values
 keep_errors = [(i not in ids) for i in df_prepro_ic.rgi_id]
 df_prepro_ic = df_prepro_ic.iloc[keep_errors]
