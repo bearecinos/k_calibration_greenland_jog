@@ -29,7 +29,7 @@ if not os.path.exists(output_path):
     os.makedirs(output_path)
 
 # Read in Ice cap preprocessing
-df_prepro_ic = pd.read_csv(os.path.join(config['input_data_folder'],
+df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
                                         config['ice_cap_prepro']))
 print('Total ice cap basins')
 print(len(df_prepro_ic))
