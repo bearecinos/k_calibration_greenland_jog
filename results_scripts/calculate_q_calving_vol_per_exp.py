@@ -4,11 +4,17 @@ import sys
 import numpy as np
 import pandas as pd
 from configobj import ConfigObj
+import argparse
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+args = parser.parse_args()
+config_file = args.conf
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
 sys.path.append(MAIN_PATH)
-
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 
 # Were to store merged data
 output_path = os.path.join(MAIN_PATH, 'output_data/13_Merged_data')
