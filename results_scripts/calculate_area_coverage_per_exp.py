@@ -17,11 +17,12 @@ config = ConfigObj(os.path.expanduser(config_file))
 MAIN_PATH = config['main_repo_path']
 sys.path.append(MAIN_PATH)
 
-config_paths = pd.read_csv(os.path.join(MAIN_PATH,
-                                        config['configuration_names']))
 
 # Results from all experiments
 input_data = os.path.join(MAIN_PATH, config['volume_results'])
+
+config_paths = pd.read_csv(os.path.join(config['input_data_folder'],
+                                        config['configuration_names']))
 
 output_path= os.path.join(MAIN_PATH, 'output_data/11_runs_stats')
 if not os.path.exists(output_path):
