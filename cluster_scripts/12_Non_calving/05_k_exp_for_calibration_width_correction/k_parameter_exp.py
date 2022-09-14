@@ -47,7 +47,7 @@ from k_tools import misc
 
 # Region Greenland
 rgi_region = '05'
-rgi_version = '61'
+rgi_version = '62'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------

@@ -1,137 +1,147 @@
 # This will run OGGM preprocessing task and the inversion with calving
-# For Greenland with default MB calibration and DEM: Glims
+# For Greenland with default MB calibration and DEM: GLIMS and ArcticDEM
 from __future__ import division
+
+# Module logger
 import logging
+log = logging.getLogger(__name__)
+
+# Python imports
 import os
+import sys
 import geopandas as gpd
 import salem
 import xarray as xr
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
-import sys
+import numpy as np
+import pandas as pd
 from configobj import ConfigObj
+import argparse
+
 # Locals
 import oggm.cfg as cfg
 from oggm import workflow
 from oggm import tasks
 from oggm.workflow import execute_entity_task
+from oggm import utils
 from oggm import graphics
+from oggm.core import inversion
 from oggm.shop import its_live
+
 # Time
 import time
 start = time.time()
-# Module logger
-log = logging.getLogger(__name__)
+
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+parser.add_argument("-mode", type=bool, default=False, help="pass running mode")
+parser.add_argument("-correct_width", type=bool, default=False, help="correct terminus width with extra data")
+args = parser.parse_args()
+config_file = args.conf
+run_mode = args.mode
+correct_width = args.correct_width
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
+input_data_path = config['input_data_folder']
+sys.path.append(MAIN_PATH)
+# Import our own module
+from k_tools import misc
+from k_tools import utils_velocity as utils_vel
 
 # Regions:
 # Greenland
 rgi_region = '05'
+rgi_version = '62'
 
 # Initialize OGGM and set up the run parameters
 # ---------------------------------------------
-
 cfg.initialize()
 
-rgi_version = '61'
+# Define working directories (either local if run_mode = true)
+# or in the cluster environment
+if run_mode:
+    cfg.PATHS['working_dir'] = utils.get_temp_dir('GP-test-run')
+else:
+    SLURM_WORKDIR = os.environ["OUTDIR"]
+    # Local paths (where to write output and where to download input)
+    WORKING_DIR = SLURM_WORKDIR
+    cfg.PATHS['working_dir'] = WORKING_DIR
 
-SLURM_WORKDIR = os.environ["WORKDIR"]
-# Local paths (where to write output and where to download input)
-WORKING_DIR = SLURM_WORKDIR
-cfg.PATHS['working_dir'] = WORKING_DIR
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
-sys.path.append(MAIN_PATH)
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
-
-from k_tools import misc
+print(cfg.PATHS['working_dir'])
 
 # Use multiprocessing
-cfg.PARAMS['use_multiprocessing'] = True
+if run_mode:
+    cfg.PARAMS['use_multiprocessing'] = False
+else:
+    # ONLY IN THE CLUSTER!
+    cfg.PARAMS['use_multiprocessing'] = True
+    cfg.PARAMS['mp_processes'] = 16
+
+
 cfg.PARAMS['border'] = 20
 cfg.PARAMS['continue_on_error'] = True
 cfg.PARAMS['min_mu_star'] = 0.0
+cfg.PARAMS['clip_mu_star'] = True
 cfg.PARAMS['inversion_fs'] = 5.7e-20
 cfg.PARAMS['use_tar_shapefiles'] = False
 cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
+cfg.PARAMS['clip_tidewater_border'] = False
 
 # RGI file
-rgidf = gpd.read_file(os.path.join(MAIN_PATH, config['RGI_FILE']))
+rgidf = gpd.read_file(os.path.join(input_data_path, config['RGI_FILE']))
 rgidf.crs = salem.wgs84.srs
 
 # We use intersects
-cfg.set_intersects_db(os.path.join(MAIN_PATH, config['intercepts']))
+cfg.set_intersects_db(os.path.join(input_data_path, config['intercepts']))
 
-rgidf = rgidf.sort_values('RGIId', ascending=True)
+# We use width corrections
+# From Will's flux gates
+data_link = os.path.join(input_data_path,
+                         'wills_data.csv')
+dfmac = pd.read_csv(data_link, index_col=0)
+dfmac = dfmac[dfmac.Region_name == 'Greenland']
 
-# Read Areas for the ice-cap computed in OGGM during
-# the pre-processing runs
-df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
-                                        config['ice_cap_prepro']))
-df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
+# Get glaciers that have no solution
+output_itslive = os.path.join(MAIN_PATH,
+                              config['vel_calibration_results_itslive'])
 
-# Assign an area to the ice cap from OGGM to avoid errors
-rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
-          'Area'] = df_prepro_ic.rgi_area_km2.values
+no_solution = os.path.join(output_itslive, 'glaciers_with_no_solution.csv')
+d_no_sol = pd.read_csv(no_solution)
+ids_rgi = d_no_sol.RGIId.values
+keep_no_solution = [(i in ids_rgi) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_no_solution]
 
-# Remove Land-terminating
-glac_type = ['0']
-keep_glactype = [(i not in glac_type) for i in rgidf.TermType]
-rgidf = rgidf.iloc[keep_glactype]
+# Sort for more efficient parallel computing
+rgidf = rgidf.sort_values('Area', ascending=False)
 
-# Remove glaciers with strong connection to the ice sheet
-connection = [2]
-keep_connection = [(i not in connection) for i in rgidf.Connect]
-rgidf = rgidf.iloc[keep_connection]
-
-# Exclude glaciers with prepro erros
-de = pd.read_csv(os.path.join(MAIN_PATH, config['prepro_err']))
-ids = de.RGIId.values
-keep_errors = [(i not in ids) for i in rgidf.RGIId]
-rgidf = rgidf.iloc[keep_errors]
-
-# Keep glaciers with no calving solution
-# Reads racmo calibration output
-output_racmo = os.path.join(MAIN_PATH,
-                            config['racmo_calibration_results'])
-path_no_solution = os.path.join(output_racmo, 'glaciers_with_no_solution.csv')
-
-no_sol_ids = misc.read_rgi_ids_from_csv(path_no_solution)
-keep_no_solution = [(i in no_sol_ids) for i in rgidf.RGIId]
-rgidf_no_sol = rgidf.iloc[keep_no_solution]
-
-# Run a single id for testing
-glacier = ['RGI60-05.10315_d11', 'RGI60-05.10315_d14']
-keep_indexes = [(i in glacier) for i in rgidf.RGIId]
-rgidf_test = rgidf.iloc[keep_indexes]
-
-# # Remove glaciers that need to be model with gimp
-# df_gimp = pd.read_csv(os.path.join(MAIN_PATH, config['glaciers_gimp']))
-# keep_indexes_no_gimp = [(i not in df_gimp.RGIId.values) for i in rgidf.RGIId]
-# keep_gimp = [(i in df_gimp.RGIId.values) for i in rgidf.RGIId]
-# rgidf_gimp = rgidf.iloc[keep_gimp]
-#
-# rgidf = rgidf.iloc[keep_indexes_no_gimp]
-#
 log.info('Starting run for RGI reg: ' + rgi_region)
-log.info('Number of glaciers with no solution: {}'.format(len(rgidf_no_sol)))
-log.info('Number of glaciers Ice cap: {}'.format(len(rgidf_test)))
+log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
 
 # Go - initialize working directories
 # -----------------------------------
-gdirs = workflow.init_glacier_directories(rgidf_no_sol)
+if run_mode:
+    keep_index_to_run = [(i in config['RGI_id_to_test']) for i in rgidf.RGIId]
+    rgidf = rgidf.iloc[keep_index_to_run]
+    log.info('Starting run for RGI reg: ' + rgi_region)
+    log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
+    gdirs = workflow.init_glacier_directories(rgidf)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                                 source='ARCTICDEM')
+else:
+    gdirs = workflow.init_glacier_directories(rgidf)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                                 source='ARCTICDEM')
 
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
-                             source='ARCTICDEM')
 
-gdirs_ice_cap = workflow.init_glacier_directories(rgidf_test)
-workflow.execute_entity_task(tasks.define_glacier_region, gdirs_ice_cap,
-                             source='ARCTICDEM')
+print(gdirs)
 #
-gdirs.extend(gdirs_ice_cap)
+# execute_entity_task(tasks.glacier_masks, gdirs)
 
 # Calculate the Pre-processing tasks
 task_list = [
@@ -147,13 +157,18 @@ task_list = [
 for task in task_list:
     execute_entity_task(task, gdirs)
 
+if correct_width:
+    for gdir in gdirs:
+        if gdir.rgi_id in dfmac.index:
+            width = dfmac.loc[gdir.rgi_id]['gate_length_km']
+            tasks.terminus_width_correction(gdir, new_width=width*1000)
+
+
 # Climate tasks -- we make sure that calving is = 0 for all tidewater
 for gdir in gdirs:
     gdir.inversion_calving_rate = 0
 
-execute_entity_task(tasks.process_cru_data, gdirs)
-execute_entity_task(tasks.local_t_star, gdirs)
-execute_entity_task(tasks.mu_star_calibration, gdirs)
+workflow.climate_tasks(gdirs, base_url=config['climate_url'])
 
 # Inversion tasks
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
@@ -161,86 +176,69 @@ execute_entity_task(tasks.mass_conservation_inversion, gdirs)
 
 workflow.execute_entity_task(its_live.velocity_to_gdir, gdirs, add_error=True)
 
+ids_with_vel = []
+vel_calving_front = []
+err_calving_front = []
+area_vel = []
+
+ids_with_low_vel = []
+vel_calving_front_low = []
+err_calving_front_low = []
+area_low_vel = []
+
 for gdir in gdirs:
-    with xr.open_dataset(gdir.get_filepath('gridded_data')) as ds:
-        ds = ds.load()
 
-    # get the wind data at 10000 m a.s.l.
-    u = ds.obs_icevel_x.where(ds.glacier_mask == 1)
-    v = ds.obs_icevel_y.where(ds.glacier_mask == 1)
-    ws = (u ** 2 + v ** 2) ** 0.5
-
-    min_vel = np.min(ws)
-    med_vel = np.median(ws)
-    mean = np.round(np.mean(ws),2)
-    max_vel = np.round(np.max(ws), 2)
-
-    # Quiver only every 3rd grid point
-    us = u[1::3, 1::3]
-    vs = v[1::3, 1::3]
-
+    # first we compute the centerlines as shapefile to crop the satellite
+    # data
     misc.write_flowlines_to_shape(gdir, path=gdir.dir)
     shp_path = os.path.join(gdir.dir, 'glacier_centerlines.shp')
     shp = gpd.read_file(shp_path)
 
-    if gdir.rgi_id == 'RGI60-05.10315_d14':
-        loc_pos = 'upper right'
+    file_vel = xr.open_dataset(gdir.get_filepath('gridded_data'))
+    proj = file_vel.attrs['pyproj_srs']
+
+    vx = file_vel.obs_icevel_x
+    vy = file_vel.obs_icevel_y
+    dvel = np.sqrt(vx ** 2 + vy ** 2)
+
+    dvel.attrs['pyproj_srs'] = proj
+
+    ex = file_vel.err_icevel_x
+    ey = file_vel.err_icevel_y
+    derr = np.sqrt(ex ** 2 + ey ** 2)
+    derr.attrs['pyproj_srs'] = proj
+
+    # we crop the satellite data to the centerline shape file
+    dvel_fls, derr_fls = utils_vel.crop_vel_data_to_flowline(dvel, derr, shp)
+
+    out = utils_vel.calculate_itslive_vel(gdir, dvel_fls, derr_fls)
+
+    if out[2] > 10:
+        ids_with_vel = np.append(ids_with_vel, gdir.rgi_id)
+        area_vel = np.append(area_vel, gdir.rgi_area_km2)
+        vel_calving_front = np.append(vel_calving_front, out[2])
+        err_calving_front = np.append(err_calving_front, out[3])
     else:
-        loc_pos = 'upper left'
+        ids_with_low_vel = np.append(ids_with_low_vel, gdir.rgi_id)
+        area_low_vel = np.append(area_low_vel, gdir.rgi_area_km2)
+        vel_calving_front_low = np.append(vel_calving_front_low, out[2])
+        err_calving_front_low = np.append(err_calving_front_low, out[3])
 
-    f, (ax1, ax2, ax3) = plt.subplots(figsize=(18, 6), ncols=3, nrows=1,
-                                    gridspec_kw = {'wspace':0.2, 'hspace':0})
-    # Show/save figure as desired.
-    llkw = {'interval': 1}
+d = {'RGIId': ids_with_low_vel,
+     'Area (km)': area_low_vel,
+     'Velocity calving front': vel_calving_front_low,
+     'Error velocity calving front': err_calving_front_low}
 
-    graphics.plot_googlemap(gdir, ax=ax1)
-    at = AnchoredText('a', prop=dict(size=16), frameon=True, loc=loc_pos)
-    ax1.add_artist(at)
+df = pd.DataFrame(data=d)
+df.to_csv(cfg.PATHS['working_dir'] + '/glaciers_with_low_velocity_data.csv')
 
-    graphics.plot_catchment_width(gdir, ax=ax2, title=gdir.rgi_id, corrected=True,
-                                  lonlat_contours_kwargs=llkw,
-                                  add_colorbar=False, add_scalebar=True)
-    at = AnchoredText('b', prop=dict(size=16), frameon=True, loc=loc_pos)
-    ax2.add_artist(at)
+dr = {'RGIId': ids_with_vel,
+     'Area (km)': area_vel,
+     'Velocity calving front': vel_calving_front,
+     'Error velocity calving front': err_calving_front}
 
-    smap = ds.salem.get_map(countries=False)
-    smap.set_shapefile(gdir.read_shapefile('outlines'))
-    smap.set_shapefile(shp, color='r', linewidth=1.5)
-    smap.set_data(ws)
-    smap.set_lonlat_contours(interval=1)
-    smap.set_cmap('Blues')
-
-    # transform their coordinates to the map reference system and plot the arrows
-    xx, yy = smap.grid.transform(us.x.values, us.y.values, crs=gdir.grid.proj)
-    xx, yy = np.meshgrid(xx, yy)
-    qu = ax3.quiver(xx, yy, us.values, vs.values)
-    qk = ax3.quiverkey(qu, min_vel, med_vel, max_vel, str(max_vel)+'m s$^{-1}$',
-                      labelpos='E', coordinates='axes')
-    smap.visualize(ax=ax3, cbar_title='ITSlive velocity \n [m/yr]',
-                   title=gdir.rgi_id)
-
-    at = AnchoredText('c', prop=dict(size=16), frameon=True, loc=loc_pos)
-    ax3.add_artist(at)
-
-    plt.savefig(os.path.join(cfg.PATHS['working_dir'],
-                             gdir.rgi_id+'.png'),
-                bbox_inches='tight')
-    plt.clf()
-    plt.close(f)
-
-    # f, ax = plt.subplots(figsize=(9, 9))
-    # smap = ds.salem.get_map(countries=False)
-    # smap.set_shapefile(gdir.read_shapefile('outlines'))
-    # smap.set_shapefile(shp, color='r', linewidth=1.5)
-    # smap.set_data(ws)
-    # smap.set_cmap('Blues')
-    # smap.visualize(ax=ax, cbar_title='ITSlive velocity \n [m/yr]', title=gdir.rgi_id)
-    # #smap.append_colorbar(ax=ax)
-    # plt.savefig(os.path.join(cfg.PATHS['working_dir'],
-    #                          gdir.rgi_id + '_velocity.png'),
-    #             bbox_inches='tight')
-    # plt.clf()
-    # plt.close(f)
+df_r = pd.DataFrame(data=dr)
+df_r.to_csv(cfg.PATHS['working_dir'] + '/glaciers_that_should_calve.csv')
 
 # Compile output
 df_stats = misc.compile_exp_statistics(gdirs)
