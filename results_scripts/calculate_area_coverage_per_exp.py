@@ -54,19 +54,22 @@ print(all_files[0])
 print(all_files[3])
 print(all_files[6])
 
-df_itslive = pd.read_csv(all_files[0])
+df_itslive = pd.read_csv(all_files[0], index_col=False)
+df_itslive.rename(columns = {'Unnamed: 0.1':'rgi_id'}, inplace = True)
 df_itslive_rest = df_itslive[~df_itslive.rgi_id.str.contains('RGI60-05.10315')].copy()
 df_itslive_ice_cap = df_itslive[df_itslive['rgi_id'].str.match('RGI60-05.10315')].copy()
 
 ic_ids_itslive = df_itslive_ice_cap.rgi_id.values
 
-df_measures = pd.read_csv(all_files[3])
+df_measures = pd.read_csv(all_files[3], index_col=False)
+df_measures.rename(columns = {'Unnamed: 0.1':'rgi_id'}, inplace = True)
 df_measures_rest = df_measures[~df_measures.rgi_id.str.contains('RGI60-05.10315')].copy()
 df_measures_ice_cap = df_measures[df_measures['rgi_id'].str.match('RGI60-05.10315')].copy()
 
 ic_ids_measures = df_measures_ice_cap.rgi_id.values
 
-df_racmo = pd.read_csv(all_files[6])
+df_racmo = pd.read_csv(all_files[6], index_col=False)
+df_racmo.rename(columns = {'Unnamed: 0.1':'rgi_id'}, inplace = True)
 df_racmo_rest = df_racmo[~df_racmo.rgi_id.str.contains('RGI60-05.10315')].copy()
 df_racmo_ice_cap = df_racmo[df_racmo['rgi_id'].str.match('RGI60-05.10315')].copy()
 
