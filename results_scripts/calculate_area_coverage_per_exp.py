@@ -5,16 +5,27 @@ import numpy as np
 import glob
 import pandas as pd
 from configobj import ConfigObj
+import argparse
 
-MAIN_PATH = os.path.expanduser('~/k_calibration_greenland_jog/')
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+args = parser.parse_args()
+config_file = args.conf
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
 sys.path.append(MAIN_PATH)
 
-config = ConfigObj(os.path.join(MAIN_PATH, 'config.ini'))
 config_paths = pd.read_csv(os.path.join(MAIN_PATH,
                                         config['configuration_names']))
 
 # Results from all experiments
 input_data = os.path.join(MAIN_PATH, config['volume_results'])
+
+output_path= os.path.join(MAIN_PATH, 'output_data/11_runs_stats')
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
 
 # Read in Ice cap preprocessing
 df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
@@ -113,3 +124,22 @@ area_racmo_neg = (df_racmo_no_negative.rgi_area_km2.sum()*100) / study_area
 print(area_racmo_neg)
 
 print(area_racmo-area_racmo_neg)
+
+category = ['Area modeled with ITSLIVE',
+            'Area modeled by MEaSUREs',
+            'Area modeled by RACMO',
+            'Area where RACMO has negative SMB']
+
+area = [area_cover_itslive,
+        area_cover_measures,
+        area_cover_racmo,
+        area_racmo_neg]
+
+area_percent = area/study_area*100
+
+d = {'Category': category,
+     'Area (km²)': area,
+     'Area (% of Greenland)': area_percent}
+ds = pd.DataFrame(data=d)
+
+ds.to_csv(os.path.join(output_path, 'area_stats.csv'))
