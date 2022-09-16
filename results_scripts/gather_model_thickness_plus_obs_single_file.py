@@ -29,13 +29,13 @@ for confs in config_paths.config_path:
     full_config_paths.append(os.path.join(MAIN_PATH, marcos_data,
                                           confs.split("/")[-1]))
 
-print(full_config_paths[6:9])
+print(full_config_paths[3:6])
 # Create an empty dictionary to drop all data per config
 d = defaultdict(list)
 
 # This loop should be done by main experiment!
 
-for path_config in full_config_paths[6:9]:
+for path_config in full_config_paths[3:6]:
     rgi_files = os.listdir(path_config)
     ids = []
     model = []
@@ -70,4 +70,4 @@ for key in keys:
     df_final = pd.concat([df_final, data], axis=1).reset_index(drop=True)
 
 df_drop = df_final.loc[:, ~df_final.T.duplicated(keep='first')]
-df_drop.to_csv(os.path.join(marcos_data, 'racmo' + '.csv'))
+df_drop.to_csv(os.path.join(marcos_data, 'measures' + '.csv'))
