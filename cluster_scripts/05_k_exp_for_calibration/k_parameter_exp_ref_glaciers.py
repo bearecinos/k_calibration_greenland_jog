@@ -1,0 +1,202 @@
+# This will run k x factors experiment only for MT
+# and compute model surface velocity and frontal ablation fluxes
+# per TW glacier in Greenland
+from __future__ import division
+
+# Module logger
+import logging
+log = logging.getLogger(__name__)
+
+# Python imports
+import os
+import sys
+import geopandas as gpd
+import salem
+import pandas as pd
+from configobj import ConfigObj
+import argparse
+import numpy as np
+import shutil
+
+# Locals
+import oggm.cfg as cfg
+from oggm import workflow
+from oggm import tasks
+from oggm.workflow import execute_entity_task
+from oggm import utils
+
+# Time
+import time
+start = time.time()
+
+# Parameters to pass into the python script form the command line
+parser = argparse.ArgumentParser()
+parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
+parser.add_argument("-mode", type=bool, default=False, help="pass running mode")
+parser.add_argument("-correct_width", type=bool, default=False, help="correct terminus width with extra data")
+args = parser.parse_args()
+config_file = args.conf
+run_mode = args.mode
+correct_width = args.correct_width
+
+config = ConfigObj(os.path.expanduser(config_file))
+MAIN_PATH = config['main_repo_path']
+input_data_path = config['input_data_folder']
+sys.path.append(MAIN_PATH)
+
+# velocity module
+from k_tools import utils_velocity as utils_vel
+from k_tools import misc
+
+# Regions:
+# Greenland
+rgi_region = '05'
+rgi_version = '62'
+
+# Initialize OGGM and set up the run parameters
+# ---------------------------------------------
+cfg.initialize()
+
+# Define working directories (either local if run_mode = true)
+# or in the cluster environment
+if run_mode:
+    cfg.PATHS['working_dir'] = utils.get_temp_dir('GP-test-run')
+else:
+    SLURM_WORKDIR = os.environ.get("OUTDIR")
+    # Local paths (where to write output and where to download input)
+    WORKING_DIR = SLURM_WORKDIR
+    cfg.PATHS['working_dir'] = WORKING_DIR
+
+
+print(cfg.PATHS['working_dir'])
+
+# Use multiprocessing
+if run_mode:
+    cfg.PARAMS['use_multiprocessing'] = True
+    cfg.PARAMS['mp_processes'] = 5
+else:
+    # ONLY IN THE CLUSTER!
+    cfg.PARAMS['use_multiprocessing'] = True
+    cfg.PARAMS['mp_processes'] = 16
+
+
+cfg.PARAMS['border'] = 20
+cfg.PARAMS['continue_on_error'] = True
+cfg.PARAMS['min_mu_star'] = 0.0
+cfg.PARAMS['clip_mu_star'] = True
+cfg.PARAMS['inversion_fs'] = 5.7e-20
+cfg.PARAMS['use_tar_shapefiles'] = False
+cfg.PARAMS['use_intersects'] = True
+cfg.PARAMS['use_compression'] = False
+cfg.PARAMS['compress_climate_netcdf'] = False
+cfg.PARAMS['clip_tidewater_border'] = False
+
+# RGI file
+rgidf = gpd.read_file(os.path.join(input_data_path, config['RGI_FILE']))
+rgidf.crs = salem.wgs84.srs
+
+# We use intersects
+cfg.set_intersects_db(os.path.join(input_data_path, config['intercepts']))
+rgidf = rgidf.sort_values('RGIId', ascending=True)
+
+# We use width corrections
+# From Will's flux gates
+data_link = os.path.join(input_data_path,
+                         'wills_data.csv')
+dfmac = pd.read_csv(data_link, index_col=0)
+dfmac = dfmac[dfmac.Region_name == 'Greenland']
+
+
+if not run_mode:
+    # Read Areas for the ice-cap computed in OGGM during
+    # the pre-processing runs
+    df_prepro_ic = pd.read_csv(os.path.join(MAIN_PATH,
+                                            config['ice_cap_prepro']))
+
+    df_prepro_ic = df_prepro_ic.sort_values('rgi_id', ascending=True)
+
+    # Assign an area to the ice cap from OGGM to avoid errors
+    rgidf.loc[rgidf['RGIId'].str.match('RGI60-05.10315'),
+              'Area'] = df_prepro_ic.rgi_area_km2.values
+
+# Keep only glaciers for testing
+path_to_test = os.path.join(input_data_path,
+                                   'reference_glaciers_test.csv')
+dl = pd.read_csv(path_to_test)
+ids_l = dl.rgi_id.values
+keep_problem = [(i in ids_l) for i in rgidf.RGIId]
+rgidf = rgidf.iloc[keep_problem]
+
+log.info('Starting run for RGI reg: ' + rgi_region)
+log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
+
+
+# Go - initialize working directories
+# -----------------------------------
+if run_mode:
+    log.info('Starting run for RGI reg: ' + rgi_region)
+    log.info('Number of glaciers with ArcticDEM: {}'.format(len(rgidf)))
+    gdirs = workflow.init_glacier_directories(rgidf)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                                 source='ARCTICDEM')
+else:
+    gdirs = workflow.init_glacier_directories(rgidf)
+    workflow.execute_entity_task(tasks.define_glacier_region, gdirs,
+                                 source='ARCTICDEM')
+
+# Pre-pro tasks
+task_list = [
+    tasks.glacier_masks,
+    tasks.compute_centerlines,
+    tasks.initialize_flowlines,
+    tasks.catchment_area,
+    tasks.catchment_intersections,
+    tasks.catchment_width_geom,
+    tasks.catchment_width_correction,
+]
+
+for task in task_list:
+    execute_entity_task(task, gdirs)
+
+if correct_width:
+    for gdir in gdirs:
+        if gdir.rgi_id in dfmac.index:
+            width = dfmac.loc[gdir.rgi_id]['gate_length_km']
+            tasks.terminus_width_correction(gdir, new_width=width*1000)
+
+# Climate tasks -- we make sure that calving is = 0 for all tidewater
+for gdir in gdirs:
+    gdir.inversion_calving_rate = 0
+
+execute_entity_task(tasks.process_climate_data, gdirs)
+execute_entity_task(tasks.local_t_star, gdirs, tstar=1975, bias=-0.24838)
+execute_entity_task(tasks.mu_star_calibration, gdirs)
+
+#workflow.climate_tasks(gdirs, base_url=config['climate_url'])
+
+# Inversion tasks
+execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
+execute_entity_task(tasks.mass_conservation_inversion, gdirs)
+
+if not os.path.exists(cfg.PATHS['working_dir']):
+    raise RuntimeError('Need a valid working_dir')
+shutil.copyfile(os.path.join(config['input_data_folder'],
+                             'ref_tstars.csv'),
+                os.path.join(cfg.PATHS['working_dir'],
+                             'ref_tstars.csv'))
+shutil.copyfile(os.path.join(config['input_data_folder'],
+                             'ref_tstars_params.json'),
+                os.path.join(cfg.PATHS['working_dir'],
+                             'ref_tstars_params.json'))
+
+# Log
+m, s = divmod(time.time() - start, 60)
+h, m = divmod(m, 60)
+log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" % (h, m, s))
+
+cfg.PARAMS['tidewater_type'] = 2
+cfg.PARAMS['use_kcalving_for_inversion'] = True
+cfg.PARAMS['use_kcalving_for_ru'] = True
+
+workflow.execute_entity_task(misc.iterate_k_parameter,
+                             gdirs)
