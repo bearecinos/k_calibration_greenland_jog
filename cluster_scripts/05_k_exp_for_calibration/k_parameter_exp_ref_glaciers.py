@@ -196,7 +196,7 @@ log.info("OGGM without calving is done! Time needed: %02d:%02d:%02d" % (h, m, s)
 
 cfg.PARAMS['tidewater_type'] = 2
 cfg.PARAMS['use_kcalving_for_inversion'] = True
-cfg.PARAMS['use_kcalving_for_ru'] = True
+cfg.PARAMS['use_kcalving_for_run'] = True
 
 workflow.execute_entity_task(misc.iterate_k_parameter,
                              gdirs)

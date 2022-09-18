@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 from configobj import ConfigObj
 import argparse
+import shutil
 
 # Locals
 import oggm.cfg as cfg
@@ -33,10 +34,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")
 parser.add_argument("-mode", type=bool, default=False, help="pass running mode")
 parser.add_argument("-correct_width", type=bool, default=False, help="correct terminus width with extra data")
+parser.add_argument("-fix_t_star", type=bool, default=False, help="fix t_star to racmo period")
 args = parser.parse_args()
 config_file = args.conf
 run_mode = args.mode
 correct_width = args.correct_width
+fix_t_star = args.fix_t_star
 
 config = ConfigObj(os.path.expanduser(config_file))
 MAIN_PATH = config['main_repo_path']
@@ -198,7 +201,12 @@ if correct_width:
 for gdir in gdirs:
     gdir.inversion_calving_rate = 0
 
-workflow.climate_tasks(gdirs, base_url=config['climate_url'])
+if fix_t_star:
+    execute_entity_task(tasks.process_climate_data, gdirs)
+    execute_entity_task(tasks.local_t_star, gdirs, tstar=1975, bias=-0.24838)
+    execute_entity_task(tasks.mu_star_calibration, gdirs)
+else:
+    workflow.climate_tasks(gdirs, base_url=config['climate_url'])
 
 # Inversion tasks
 execute_entity_task(tasks.prepare_for_inversion, gdirs, add_debug_var=True)
@@ -211,6 +219,18 @@ filesuffix = '_greenland_no_calving_with_sliding_'
 df_stats.to_csv(os.path.join(cfg.PATHS['working_dir'],
                              ('glacier_statistics' + filesuffix + '.csv')))
 
+if fix_t_star:
+    if not os.path.exists(cfg.PATHS['working_dir']):
+        raise RuntimeError('Need a valid working_dir')
+    shutil.copyfile(os.path.join(config['input_data_folder'],
+                                 'ref_tstars.csv'),
+                    os.path.join(cfg.PATHS['working_dir'],
+                                 'ref_tstars.csv'))
+    shutil.copyfile(os.path.join(config['input_data_folder'],
+                                 'ref_tstars_params.json'),
+                    os.path.join(cfg.PATHS['working_dir'],
+                                 'ref_tstars_params.json'))
+
 # Log
 m, s = divmod(time.time() - start, 60)
 h, m = divmod(m, 60)
@@ -219,7 +239,7 @@ log.info("OGGM is done! Time needed: %02d:%02d:%02d" % (h, m, s))
 cfg.PARAMS['continue_on_error'] = False
 cfg.PARAMS['tidewater_type'] = 2
 cfg.PARAMS['use_kcalving_for_inversion'] = True
-cfg.PARAMS['use_kcalving_for_ru'] = True
+cfg.PARAMS['use_kcalving_for_run'] = True
 
 glac_errors = []
 glac_dont_calve = []
@@ -254,4 +274,4 @@ filesuffix_c = '_greenland_calving_with_sliding'
 df_stats_c.to_csv(os.path.join(cfg.PATHS['working_dir'],
                                ('glacier_statistics' + filesuffix_c + '.csv')))
 
-#misc.reset_per_glacier_working_dir()
+misc.reset_per_glacier_working_dir()
