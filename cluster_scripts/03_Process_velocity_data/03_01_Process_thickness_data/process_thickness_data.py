@@ -194,6 +194,7 @@ if correct_width:
             tasks.terminus_width_correction(gdir, new_width=width*1000)
 
 workflow.execute_entity_task(millan22.thickness_to_gdir, gdirs, add_error=True)
+millan22.compile_millan_statistics(gdirs, path=True)
 
 # Log
 m, s = divmod(time.time() - start, 60)
