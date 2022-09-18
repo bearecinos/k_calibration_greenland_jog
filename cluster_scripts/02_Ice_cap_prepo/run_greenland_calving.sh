@@ -2,7 +2,7 @@
 # Abort whenever a single step fails. Without this, bash will just continue on errors.
 #set -e
 
-export OUTDIR="/scratch/local/brecinos/k_calibration_greenland_jog/output_data_fix_tstar/02_Ice_cap_prepo/"
+export OUTDIR="/scratch/local/brecinos/k_calibration_greenland_jog/output_data/02_Ice_cap_prepo/"
 mkdir -p "$OUTDIR"
 
 echo $OUTDIR
