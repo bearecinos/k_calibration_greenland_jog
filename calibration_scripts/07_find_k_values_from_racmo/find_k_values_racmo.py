@@ -71,7 +71,7 @@ output = defaultdict(list)
 
 for j, f in enumerate(filenames):
     glacier = pd.read_csv(f)
-    glacier = glacier.drop_duplicates(subset='calving_flux', keep=False)
+    glacier = glacier.drop_duplicates(subset='calving_flux', keep='first')
     base = os.path.basename(f)
     rgi_id = os.path.splitext(base)[0]
     if glacier.empty:
