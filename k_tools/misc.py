@@ -784,3 +784,76 @@ def iterate_k_parameter(gdir):
     df = pd.DataFrame(data=d)
 
     df.to_csv(os.path.join(cfg.PATHS['working_dir'], gdir.rgi_id + '.csv'))
+
+def combine_volume_data(path_to_exp, path_to_obs, name):
+    """
+    Iterates over a model experiment and combines observations and
+    model data, returns a dataframe
+    """
+
+    exp_f = pd.read_csv(path_to_exp)
+    exp_f.rename(columns={'Unnamed: 0.1': 'rgi_id'}, inplace=True)
+
+    obs_f = pd.read_csv(path_to_obs)
+
+    df_exp = pd.DataFrame()
+
+    for rgi_id in exp_f.rgi_id:
+        if 'lowbound' in name:
+            data_exp = exp_f.loc[lambda exp_f: exp_f['rgi_id'] == rgi_id][['rgi_id',
+                                                                           'rgi_area_km2',
+                                                                           'volume_before_calving',
+                                                                           'volume_before_calving_km3',
+                                                                           name + '_inv_volume_km3',
+                                                                           name + '_calving_flux',
+                                                                           name + '_calving_mu_star',
+                                                                           name + '_volume_bsl']]
+        else:
+            data_exp = exp_f.loc[lambda exp_f: exp_f['rgi_id'] == rgi_id][['rgi_id',
+                                                                           name + '_inv_volume_km3',
+                                                                           name + '_calving_flux',
+                                                                           name + '_calving_mu_star',
+                                                                           name + '_volume_bsl']]
+        data_obs = obs_f.loc[lambda obs_f: obs_f['rgi_id'] == rgi_id]
+        combine = pd.merge(data_exp, data_obs, on=['rgi_id'])
+        # print(combine)
+        # print('----------------------')
+        df_exp = pd.concat([df_exp, combine])
+
+    assert len(df_exp) == len(exp_f)
+    return df_exp
+
+
+def combine_fa_data(path_to_exp, obs_f, name):
+    """
+    Iterates over a model experiment and combines observations and
+    model data, returns a dataframe
+    """
+
+    exp_f = pd.read_csv(path_to_exp)
+    exp_f.rename(columns={'Unnamed: 0.1': 'rgi_id'}, inplace=True)
+
+    df_exp = pd.DataFrame()
+
+    for rgi_id in exp_f.rgi_id:
+        if 'lowbound' in name:
+            data_exp = exp_f.loc[lambda exp_f: exp_f['rgi_id'] == rgi_id][['rgi_id',
+                                                                           'rgi_area_km2',
+                                                                           'volume_before_calving',
+                                                                           'volume_before_calving_km3',
+                                                                           name + '_inv_volume_km3',
+                                                                           name + '_calving_flux',
+                                                                           name + '_calving_mu_star',
+                                                                           name + '_volume_bsl']]
+        else:
+            data_exp = exp_f.loc[lambda exp_f: exp_f['rgi_id'] == rgi_id][['rgi_id',
+                                                                           name + '_inv_volume_km3',
+                                                                           name + '_calving_flux',
+                                                                           name + '_calving_mu_star',
+                                                                           name + '_volume_bsl']]
+
+        data_obs = obs_f.loc[lambda obs_f: obs_f['rgi_id'] == rgi_id]
+        combine = pd.merge(data_exp, data_obs, on=['rgi_id'])
+        df_exp = pd.concat([df_exp, combine])
+
+    return df_exp

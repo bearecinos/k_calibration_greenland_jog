@@ -6,6 +6,8 @@ from configobj import ConfigObj
 from functools import reduce
 import argparse
 
+## MUST run export HDF5_USE_FILE_LOCKING='FALSE' before!
+
 # Parameters to pass into the python script form the command line
 parser = argparse.ArgumentParser()
 parser.add_argument("-conf", type=str, default="../../../config.ini", help="pass config file")

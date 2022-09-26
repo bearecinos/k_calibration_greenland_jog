@@ -110,7 +110,7 @@ cfg.PARAMS['use_intersects'] = True
 cfg.PARAMS['use_compression'] = False
 cfg.PARAMS['compress_climate_netcdf'] = False
 cfg.PARAMS['use_kcalving_for_inversion'] = True
-cfg.PARAMS['use_kcalving_for_ru'] = True
+cfg.PARAMS['use_kcalving_for_run'] = True
 
 # gdirs = workflow.init_glacier_regions(rgidf, reset=False)
 gdirs = workflow.init_glacier_directories(rgidf.RGIId.values, reset=False)
